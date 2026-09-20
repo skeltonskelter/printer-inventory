@@ -1,0 +1,27 @@
+# Isolated, disposable database. No host ports or application data volume.
+name: printer-inventory-tests
+services:
+  test-db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: inventory_test
+      POSTGRES_USER: inventory_test
+      POSTGRES_PASSWORD: test_only_not_a_real_secret
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U inventory_test -d inventory_test"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
+  tests:
+    build:
+      context: ./backend
+      target: integration-test
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://test-db:5432/inventory_test
+      SPRING_DATASOURCE_USERNAME: inventory_test
+      SPRING_DATASOURCE_PASSWORD: test_only_not_a_real_secret
+    depends_on:
+      test-db:
+        condition: service_healthy

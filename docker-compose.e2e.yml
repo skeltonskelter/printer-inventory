@@ -1,0 +1,51 @@
+name: printer-inventory-browser-tests
+services:
+  db:
+    extends: {file: docker-compose.production.yml, service: db}
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: inventory_browser_test
+      POSTGRES_USER: inventory_test
+      POSTGRES_PASSWORD: test_only_not_a_real_secret
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U inventory_test -d inventory_browser_test"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
+  backend:
+    extends: {file: docker-compose.production.yml, service: backend}
+    build: ./backend
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/inventory_browser_test
+      SPRING_DATASOURCE_USERNAME: inventory_test
+      SPRING_DATASOURCE_PASSWORD: test_only_not_a_real_secret
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/api/health"]
+      interval: 3s
+      timeout: 8s
+      retries: 30
+  frontend:
+    extends: {file: docker-compose.production.yml, service: frontend}
+    build: ./frontend
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/healthz"]
+      interval: 2s
+      timeout: 3s
+      retries: 10
+  browser-tests:
+    build: ./e2e
+    init: true
+    shm_size: 1gb
+    volumes:
+      - ./.verification/browser:/reports
+    depends_on:
+      frontend:
+        condition: service_healthy
