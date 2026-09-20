@@ -1,0 +1,30 @@
+import { test, expect } from '@playwright/test';
+
+test('production proxy serves deep routes, security headers, cached assets, and JSON APIs', async ({ page, request }) => {
+  const response = await request.get('/printers/123/relocate');
+  expect(response.status()).toBe(200);
+  expect(response.headers()['cache-control']).toContain('no-cache');
+  expect(response.headers()['x-content-type-options']).toBe('nosniff');
+  expect(response.headers()['x-frame-options']).toBe('DENY');
+  expect(response.headers()['content-security-policy']).toContain("frame-ancestors 'none'");
+  expect(response.headers()['server']).toBe('nginx');
+  const html = await response.text();
+  const asset = html.match(/src="(\/assets\/[^\"]+\.js)"/)[1];
+  const js = await request.get(asset);
+  expect(js.status()).toBe(200);
+  expect(js.headers()['cache-control']).toContain('immutable');
+  expect(js.headers()['x-content-type-options']).toBe('nosniff');
+  expect((await request.get('/assets/missing.js')).status()).toBe(404);
+  const health = await request.get('/api/health');
+  expect((await health.json()).database).toBe('UP');
+  expect(health.headers()['x-frame-options']).toBe('DENY');
+  const missing = await request.get('/api/printers/9223372036854775807');
+  expect(missing.status()).toBe(404);
+  expect(missing.headers()['content-type']).toContain('application/json');
+  const violations = [];
+  await page.exposeFunction('reportCsp', value => violations.push(value));
+  await page.addInitScript(() => document.addEventListener('securitypolicyviolation', event => window.reportCsp(event.violatedDirective)));
+  await page.goto('/dashboard');
+  await expect(page.locator('.metric-value')).toHaveCount(6);
+  expect(violations).toEqual([]);
+});
