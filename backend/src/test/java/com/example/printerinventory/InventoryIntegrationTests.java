@@ -157,7 +157,7 @@ class InventoryIntegrationTests {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"ACTIVE", "UNDER_REPAIR", "FOR_REPAIR", "STORAGE", "RETIRED", "DISPOSED"})
+    @ValueSource(strings = {"ACTIVE", "UNDER_REPAIR", "FOR_REPAIR", "STORAGE", "RETIRED"})
     void acceptsEachSupportedStatus(String printerStatus) throws Exception {
         long location = createLocation("ICT").get("id").asLong();
         assertEquals(printerStatus, createPrinter(location, "ICT-PRN-001", "SN-" + printerStatus, printerStatus).get("status").asText());

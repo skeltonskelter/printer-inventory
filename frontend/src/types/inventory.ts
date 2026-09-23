@@ -4,7 +4,6 @@ export const statusLabels = {
   FOR_REPAIR: "For Repair",
   STORAGE: "Storage",
   RETIRED: "Retired",
-  DISPOSED: "Disposed",
 } as const;
 export type PrinterStatus = keyof typeof statusLabels;
 export interface Location {

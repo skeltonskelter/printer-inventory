@@ -43,7 +43,7 @@ For local development, the same environment variables and `gradlew.bat bootRun` 
 - Sticker numbers and supplied serial numbers are trimmed, stored in uppercase, and unique without regard to case. PostgreSQL enforces uniqueness even if two requests arrive together.
 - Required location field: `department`. `building`, `floor`, `room`, and `description` are optional. A printer must reference an existing location.
 - Length limits: brand 100; model and serial 120; sticker 80; remarks 2000; department/building 120; floor 50; room 80; description 1000.
-- Status values: `ACTIVE`, `UNDER_REPAIR`, `FOR_REPAIR`, `STORAGE`, `RETIRED`, `DISPOSED`.
+- Status values: `ACTIVE`, `UNDER_REPAIR`, `FOR_REPAIR`, `STORAGE`, `RETIRED`.
 - `createdAt` and `updatedAt` are assigned by the backend and returned in UTC.
 - Responses include `version`. Supply the latest value on **PUT**. A missing version returns 400; an out-of-date version returns 409 so an old form cannot overwrite a newer edit. POST does not require it.
 - PUT is a complete editable-field replacement, not a partial update. Omitted optional fields are cleared.

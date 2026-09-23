@@ -27,11 +27,11 @@ class DashboardIntegrationTests {
     @Autowired ObjectMapper json;
 
     @Test
-    void emptyDashboardHasAllSixZeroStatusesAndNoActivity() throws Exception {
+    void emptyDashboardHasAllZeroStatusesAndNoActivity() throws Exception {
         var result = dashboard();
         assertEquals(0, result.get("totalPrinters").asLong());
         assertEquals(0, result.get("relocatedPrinters").asLong());
-        assertEquals(6, result.get("statusCounts").size());
+        assertEquals(5, result.get("statusCounts").size());
         for (var status : PrinterStatus.values()) assertEquals(0, result.get("statusCounts").get(status.name()).asLong());
         assertEquals(0, result.get("recentlyAdded").size());
         assertEquals(0, result.get("recentTransfers").size());
@@ -52,7 +52,7 @@ class DashboardIntegrationTests {
         transfer(deleted, a, b, 3);
         jdbc.update("update printers set deleted_at = now() where id = ?", deleted);
         var result = dashboard();
-        assertEquals(6, result.get("totalPrinters").asLong());
+        assertEquals(5, result.get("totalPrinters").asLong());
         for (var status : PrinterStatus.values()) assertEquals(1, result.get("statusCounts").get(status.name()).asLong());
         assertEquals(1, result.get("relocatedPrinters").asLong());
         assertEquals(2, result.get("recentTransfers").size());
@@ -62,7 +62,7 @@ class DashboardIntegrationTests {
         assertEquals(2, result.get("statusCounts").get("STORAGE").asLong());
         jdbc.update("update printers set deleted_at = now() where id = ?", active);
         result = dashboard();
-        assertEquals(5, result.get("totalPrinters").asLong());
+        assertEquals(4, result.get("totalPrinters").asLong());
         assertEquals(0, result.get("relocatedPrinters").asLong());
         assertEquals(0, result.get("recentTransfers").size());
         assertEquals(3, jdbc.queryForObject("select count(*) from relocation_history", Integer.class));

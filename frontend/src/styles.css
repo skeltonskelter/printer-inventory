@@ -97,7 +97,7 @@ h1 { font-size: clamp(25px, 2.4vw, 31px); letter-spacing: -.9px; font-weight: 65
 .printer-under_repair { background: #fff2dc; color: #855411; }
 .printer-for_repair { background: #fcecec; color: #994443; }
 .printer-storage { background: #edf0fb; color: #52649a; }
-.printer-retired, .printer-disposed { background: #eceef1; color: #606673; }
+.printer-retired { background: #eceef1; color: #606673; }
 .printer-cards { display: none; }
 .printer-card { padding: 22px; min-width: 0; overflow-wrap: anywhere; }
 .printer-card h2 { font-size: 17px; margin: 18px 0; }

@@ -4,9 +4,9 @@ The dashboard is the home page at `/dashboard`. The printer list remains at `/pr
 
 ## What changed
 
-Six summary cards show total printers, Active, Under Repair, Storage, Retired, and relocated printers. Count links open the corresponding filtered printer list. Additional links show For Repair and Disposed counts, so all six statuses are represented. Relocated printers are counted once per printer, regardless of the number of transfers. This figure overlaps the status counts; it is not another status.
+Five summary cards show total printers, Active, Under Repair, Storage, Retired, and relocated printers. Count links open the corresponding filtered printer list. An additional link shows For Repair. Relocated printers are counted once per printer, regardless of the number of transfers. This figure overlaps the status counts; it is not another status.
 
-Every count and recent-activity list excludes soft-deleted printers. Their relocation history is still preserved by Phase 4. A retired or disposed printer remains in inventory until deleted.
+Every count and recent-activity list excludes soft-deleted printers. Their relocation history is still preserved by Phase 4. A retired printer remains in inventory until deleted.
 
 The dashboard displays the latest five added printers and latest five recorded transfers. The transfer list is ordered by the time the transfer was recorded, then ID, and also displays the actual transfer date. One printer can appear more than once in this activity list. Each sticker links to printer details and its full history.
 
@@ -23,7 +23,7 @@ On tablets up to 991px, navigation moves above the content to give forms and car
   "totalPrinters": 0,
   "statusCounts": {
     "ACTIVE": 0, "UNDER_REPAIR": 0, "FOR_REPAIR": 0,
-    "STORAGE": 0, "RETIRED": 0, "DISPOSED": 0
+    "STORAGE": 0, "RETIRED": 0
   },
   "relocatedPrinters": 0,
   "recentlyAdded": [],

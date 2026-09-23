@@ -117,12 +117,7 @@ export function DashboardPage() {
                 Also in your inventory:{" "}
                 <Link to="/printers?status=FOR_REPAIR">
                   For Repair ({data.statusCounts.FOR_REPAIR.toLocaleString()})
-                </Link>
-                <span aria-hidden="true"> · </span>
-                <Link to="/printers?status=DISPOSED">
-                  Disposed ({data.statusCounts.DISPOSED.toLocaleString()})
-                </Link>
-              </p>
+                </Link></p>
               <p>
                 Deleted printers are excluded. Relocated printers are counted
                 once.

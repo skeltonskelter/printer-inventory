@@ -23,7 +23,7 @@ test('dashboard reflects transfers, status changes, deletion, and works on deskt
   const a = await (await request.post('/api/locations', { data: { department: 'Information Technology', building: 'Main Building', room: '201' } })).json();
   const b = await (await request.post('/api/locations', { data: { department: 'Accounting Department', building: 'Annex', room: '102' } })).json();
   const printers = [];
-  for (const [index, status] of ['ACTIVE', 'UNDER_REPAIR', 'STORAGE', 'RETIRED', 'FOR_REPAIR', 'DISPOSED'].entries()) {
+  for (const [index, status] of ['ACTIVE', 'UNDER_REPAIR', 'STORAGE', 'RETIRED', 'FOR_REPAIR'].entries()) {
     const response = await request.post('/api/printers', { data: { brand: 'Epson', model: 'L5290', serialNumber: `DASH-SN-${index}`, stickerNumber: `DASH-${index}`, locationId: a.id, status } });
     expect(response.status()).toBe(201);
     printers.push(await response.json());
@@ -36,7 +36,7 @@ test('dashboard reflects transfers, status changes, deletion, and works on deskt
   }
   await page.goto('/dashboard');
   const metric = label => page.locator('.metric-card').filter({ has: page.getByRole('heading', { name: label, exact: false }) }).locator('.metric-value');
-  await expect(metric('Total printers')).toHaveText('6');
+  await expect(metric('Total printers')).toHaveText('5');
   await expect(metric('Relocated printers')).toHaveText('1');
   await expect(page.getByRole('region', { name: 'Recent transfers' }).locator('li')).toHaveCount(2);
   await expect(page.getByRole('region', { name: 'Recently added' }).locator('li')).toHaveCount(5);
