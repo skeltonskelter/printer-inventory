@@ -117,6 +117,7 @@ export function PrinterDetailsPage() {
                     {(
                       [
                         ["Department", printer.location.department],
+                        ["Section", printer.location.section],
                         ["Building", printer.location.building],
                         ["Floor", printer.location.floor],
                         ["Room", printer.location.room],

@@ -1,0 +1,1 @@
+ALTER TABLE locations ADD COLUMN section VARCHAR(120);

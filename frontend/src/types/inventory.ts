@@ -10,6 +10,7 @@ export type PrinterStatus = keyof typeof statusLabels;
 export interface Location {
   id: number;
   department: string;
+  section: string | null;
   building: string | null;
   floor: string | null;
   room: string | null;

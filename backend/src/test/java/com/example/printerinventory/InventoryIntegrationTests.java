@@ -44,6 +44,7 @@ class InventoryIntegrationTests {
         JsonNode location = createLocation(" ICT ");
         long id = location.get("id").asLong();
         assertEquals("ICT", location.get("department").asText());
+        assertEquals("Operations", location.get("section").asText());
         mvc.perform(get("/api/locations/{id}", id))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.room").value("101"));
         mvc.perform(get("/api/locations")).andExpect(status().isOk())
@@ -217,8 +218,25 @@ class InventoryIntegrationTests {
                 """, location));
     }
 
+    @Test
+    void locationSectionIsOptionalAndMayBeShared() throws Exception {
+        JsonNode first = json.readTree(mvc.perform(post("/api/locations").contentType(APPLICATION_JSON)
+                        .content("{\"department\":\"Operations\",\"section\":\"Section A\"}"))
+                .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString());
+        JsonNode second = json.readTree(mvc.perform(post("/api/locations").contentType(APPLICATION_JSON)
+                        .content("{\"department\":\"Finance\",\"section\":\"Section A\"}"))
+                .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString());
+        assertEquals("Section A", first.get("section").asText());
+        assertEquals("Section A", second.get("section").asText());
+        JsonNode optional = json.readTree(mvc.perform(post("/api/locations").contentType(APPLICATION_JSON)
+                        .content("{\"department\":\"Unassigned\"}"))
+                .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString());
+        assertTrue(optional.get("section").isNull());
+    }
+
     private JsonNode createLocation(String department) throws Exception {
-        String body = json.writeValueAsString(Map.of("department", department, "building", "Main", "room", "101"));
+        String body = json.writeValueAsString(Map.of("department", department, "section", "Operations",
+                "building", "Main", "room", "101"));
         var result = mvc.perform(post("/api/locations").contentType(APPLICATION_JSON).content(body))
                 .andExpect(status().isCreated()).andExpect(header().exists("Location")).andReturn();
         return json.readTree(result.getResponse().getContentAsString());

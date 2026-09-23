@@ -11,6 +11,8 @@ public class Location {
     @Column(nullable = false, length = 120)
     private String department;
     @Column(length = 120)
+    private String section;
+    @Column(length = 120)
     private String building;
     @Column(length = 50)
     private String floor;
@@ -23,14 +25,16 @@ public class Location {
 
     public Long getId() { return id; }
     public String getDepartment() { return department; }
+    public String getSection() { return section; }
     public String getBuilding() { return building; }
     public String getFloor() { return floor; }
     public String getRoom() { return room; }
     public String getDescription() { return description; }
     public long getVersion() { return version; }
 
-    public void update(String department, String building, String floor, String room, String description) {
+    public void update(String department, String section, String building, String floor, String room, String description) {
         this.department = department;
+        this.section = section;
         this.building = building;
         this.floor = floor;
         this.room = room;

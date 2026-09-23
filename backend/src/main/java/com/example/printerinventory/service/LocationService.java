@@ -25,7 +25,7 @@ public class LocationService {
     }
 
     public List<LocationResponse> list() {
-        return locations.findAll(Sort.by("department", "building", "floor", "room", "id"))
+        return locations.findAll(Sort.by("department", "section", "building", "floor", "room", "id"))
                 .stream().map(LocationResponse::from).toList();
     }
 
@@ -77,7 +77,8 @@ public class LocationService {
     }
 
     private void apply(Location location, LocationRequest request) {
-        location.update(request.department().trim(), InputText.optional(request.building()),
+        location.update(request.department().trim(), InputText.optional(request.section()),
+                InputText.optional(request.building()),
                 InputText.optional(request.floor()), InputText.optional(request.room()),
                 InputText.optional(request.description()));
     }

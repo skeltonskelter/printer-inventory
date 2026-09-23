@@ -4,6 +4,7 @@ import jakarta.validation.constraints.*;
 
 public record LocationRequest(
         @NotBlank(message = "Department is required") @Size(max = 120) String department,
+        @Size(max = 120) String section,
         @Size(max = 120) String building,
         @Size(max = 50) String floor,
         @Size(max = 80) String room,

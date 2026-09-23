@@ -27,6 +27,7 @@ test('empty installation: create location, add, view, edit, search, cancel and c
   await page.getByLabel('Serial number', { exact: true }).fill(`SN-${sticker}`);
   await page.getByRole('button', { name: '+ New location' }).click();
   await page.getByLabel('Department *').fill('ICT Department');
+  await page.getByLabel('Section', { exact: true }).fill('Operations');
   await page.getByLabel('Building', { exact: true }).fill('Main');
   await page.getByLabel('Room', { exact: true }).fill('101');
   await page.getByRole('button', { name: 'Save location' }).click();

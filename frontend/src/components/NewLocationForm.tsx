@@ -53,6 +53,7 @@ export function NewLocationForm({
             {(
               [
                 ["department", "Department", 120],
+                ["section", "Section", 120],
                 ["building", "Building", 120],
                 ["floor", "Floor", 50],
                 ["room", "Room", 80],
