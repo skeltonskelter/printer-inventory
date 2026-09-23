@@ -4,7 +4,7 @@ import { inventory } from "../api/inventory";
 import { useResource } from "../hooks/useResource";
 import { LoadError, Loading, PrinterBadge } from "../components/InventoryUi";
 import { DeletePrinterDialog } from "../components/DeletePrinterDialog";
-import { displayDate } from "../utils/inventory";
+import { displayDate, stickerLabel } from "../utils/inventory";
 import { RelocationHistoryList } from "../components/RelocationHistoryList";
 
 export function PrinterDetailsPage() {
@@ -31,7 +31,7 @@ export function PrinterDetailsPage() {
             <div className="page-heading">
               <div>
                 <div className="eyebrow">PRINTER DETAILS</div>
-                <h1>{printer.stickerNumber}</h1>
+                <h1>{stickerLabel(printer.stickerNumber)}</h1>
                 <p>
                   {printer.brand} {printer.model}
                 </p>
@@ -68,14 +68,12 @@ export function PrinterDetailsPage() {
                   <h2>Printer information</h2>
                   <dl className="details-grid">
                     <div>
-                      <dt>Sticker number</dt>
-                      <dd>{printer.stickerNumber}</dd>
+                      <dt>Serial number</dt>
+                      <dd>{printer.serialNumber || "Not recorded"}</dd>
                     </div>
                     <div>
-                      <dt>Status</dt>
-                      <dd>
-                        <PrinterBadge status={printer.status} />
-                      </dd>
+                      <dt>Sticker number</dt>
+                      <dd>{stickerLabel(printer.stickerNumber)}</dd>
                     </div>
                     <div>
                       <dt>Brand</dt>
@@ -86,20 +84,18 @@ export function PrinterDetailsPage() {
                       <dd>{printer.model}</dd>
                     </div>
                     <div>
-                      <dt>Serial number</dt>
-                      <dd>{printer.serialNumber || "Not recorded"}</dd>
-                    </div>
-                    <div>
-                      <dt>Printer ID</dt>
-                      <dd>{printer.id}</dd>
-                    </div>
-                    <div>
                       <dt>Date added</dt>
                       <dd>{displayDate(printer.createdAt)}</dd>
                     </div>
                     <div>
                       <dt>Last updated</dt>
                       <dd>{displayDate(printer.updatedAt)}</dd>
+                    </div>
+                    <div>
+                      <dt>Status</dt>
+                      <dd>
+                        <PrinterBadge status={printer.status} />
+                      </dd>
                     </div>
                     <div className="detail-wide">
                       <dt>Remarks</dt>

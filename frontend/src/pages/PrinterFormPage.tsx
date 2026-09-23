@@ -86,7 +86,7 @@ function PrinterForm({
     for (const [name, label] of [
       ["brand", "Brand"],
       ["model", "Model"],
-      ["stickerNumber", "Sticker number"],
+      ["serialNumber", "Serial Number"],
     ]) {
       if (!text(name)) errors[name] = `${label} is required.`;
     }
@@ -181,8 +181,8 @@ function PrinterForm({
               [
                 ["brand", "Brand", 100, true],
                 ["model", "Model", 120, true],
-                ["serialNumber", "Serial number", 120, false],
-                ["stickerNumber", "Sticker number", 80, true],
+                ["serialNumber", "Serial number", 120, true],
+                ["stickerNumber", "Sticker number", 80, false],
               ] as const
             ).map(([name, label, max, required]) => (
               <div className="col-12 col-md-6" key={name}>

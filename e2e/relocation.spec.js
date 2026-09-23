@@ -4,7 +4,7 @@ async function setup(request) {
   const suffix = `${Date.now()}-${Math.random().toString(16).slice(2, 6)}`;
   const source = await (await request.post('/api/locations', { data: { department: `ICT ${suffix}`, building: 'Main', room: '101' } })).json();
   const destination = await (await request.post('/api/locations', { data: { department: `Accounting ${suffix}`, building: 'Annex', room: '202' } })).json();
-  const response = await request.post('/api/printers', { data: { brand: 'Epson', model: 'L5290', stickerNumber: `MOVE-${suffix}`, locationId: source.id, status: 'ACTIVE' } });
+  const response = await request.post('/api/printers', { data: { brand: 'Epson', model: 'L5290', serialNumber: `SN-MOVE-${suffix}`, stickerNumber: `MOVE-${suffix}`, locationId: source.id, status: 'ACTIVE' } });
   expect(response.status()).toBe(201);
   return { source, destination, printer: await response.json() };
 }

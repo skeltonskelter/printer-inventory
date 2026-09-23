@@ -43,7 +43,7 @@ export function DeletePrinterDialog({
       <h2 id="delete-title">Delete printer?</h2>
       <p>
         Are you sure you want to delete printer{" "}
-        <strong>{printer.stickerNumber}</strong>?
+        <strong>{printer.stickerNumber || "No sticker number"}</strong>?
       </p>
       <p className="text-secondary">
         It will disappear from the inventory. Its record is retained, and its

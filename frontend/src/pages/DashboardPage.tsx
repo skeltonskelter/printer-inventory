@@ -4,7 +4,7 @@ import { inventory } from "../api/inventory";
 import { useResource } from "../hooks/useResource";
 import { Icon } from "../components/Icon";
 import { Loading, LoadError, PrinterBadge } from "../components/InventoryUi";
-import { displayDate, locationLabel } from "../utils/inventory";
+import { displayDate, locationLabel, stickerLabel } from "../utils/inventory";
 
 export function DashboardPage() {
   const { data, loading, error, reload } = useResource(
@@ -163,7 +163,7 @@ export function DashboardPage() {
                             className="sticker-link"
                             to={`/printers/${printer.id}`}
                           >
-                            {printer.stickerNumber}
+                            {stickerLabel(printer.stickerNumber)}
                           </Link>
                           <PrinterBadge status={printer.status} />
                         </div>
@@ -203,7 +203,7 @@ export function DashboardPage() {
                             className="sticker-link"
                             to={`/printers/${printer.id}`}
                           >
-                            {printer.stickerNumber}
+                            {stickerLabel(printer.stickerNumber)}
                           </Link>
                           <span className="transfer-label">Relocated</span>
                         </div>

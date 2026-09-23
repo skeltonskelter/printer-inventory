@@ -5,7 +5,7 @@ import { useResource } from "../hooks/useResource";
 import { DeletePrinterDialog } from "../components/DeletePrinterDialog";
 import { LoadError, Loading, PrinterBadge } from "../components/InventoryUi";
 import { statusLabels, type Printer } from "../types/inventory";
-import { locationLabel } from "../utils/inventory";
+import { locationLabel, stickerLabel } from "../utils/inventory";
 
 export function PrinterListPage() {
   const [params, setParams] = useSearchParams();
@@ -38,7 +38,7 @@ export function PrinterListPage() {
     setParams(next);
   }
   function deleted() {
-    setNotice(`Printer ${deleting?.stickerNumber} was deleted.`);
+    setNotice(`Printer ${stickerLabel(deleting?.stickerNumber)} was deleted.`);
     setDeleting(null);
     if (list.data?.content.length === 1 && page > 0) goToPage(page - 1);
     else list.reload();
@@ -49,28 +49,28 @@ export function PrinterListPage() {
         <Link
           to={`/printers/${printer.id}`}
           className="btn btn-sm btn-outline-secondary"
-          aria-label={`View ${printer.stickerNumber}`}
+          aria-label={`View ${stickerLabel(printer.stickerNumber)}`}
         >
           View
         </Link>
         <Link
           to={`/printers/${printer.id}/edit`}
           className="btn btn-sm btn-outline-secondary"
-          aria-label={`Edit ${printer.stickerNumber}`}
+          aria-label={`Edit ${stickerLabel(printer.stickerNumber)}`}
         >
           Edit
         </Link>
         <Link
           to={`/printers/${printer.id}/relocate`}
           className="btn btn-sm btn-outline-primary"
-          aria-label={`Relocate ${printer.stickerNumber}`}
+          aria-label={`Relocate ${stickerLabel(printer.stickerNumber)}`}
         >
           Relocate
         </Link>
         <button
           className="btn btn-sm btn-outline-danger"
           onClick={() => setDeleting(printer)}
-          aria-label={`Delete ${printer.stickerNumber}`}
+          aria-label={`Delete ${stickerLabel(printer.stickerNumber)}`}
         >
           Delete
         </button>
@@ -248,7 +248,7 @@ export function PrinterListPage() {
                               className="sticker-link"
                               to={`/printers/${printer.id}`}
                             >
-                              {printer.stickerNumber}
+                              {stickerLabel(printer.stickerNumber)}
                             </Link>
                           </td>
                           <td>
@@ -276,7 +276,7 @@ export function PrinterListPage() {
                           className="sticker-link"
                           to={`/printers/${printer.id}`}
                         >
-                          {printer.stickerNumber}
+                          {stickerLabel(printer.stickerNumber)}
                         </Link>
                         <PrinterBadge status={printer.status} />
                       </div>

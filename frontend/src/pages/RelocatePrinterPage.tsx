@@ -5,7 +5,7 @@ import { useResource } from "../hooks/useResource";
 import { Loading, LoadError } from "../components/InventoryUi";
 import { NewLocationForm } from "../components/NewLocationForm";
 import type { ApiProblem, Location, Printer } from "../types/inventory";
-import { locationLabel } from "../utils/inventory";
+import { locationLabel, stickerLabel } from "../utils/inventory";
 
 export function RelocatePrinterPage() {
   const { id = "" } = useParams();
@@ -97,7 +97,7 @@ function RelocateForm({
   return (
     <>
       <section className="panel details-panel mb-4">
-        <h2>{printer.stickerNumber}</h2>
+        <h2>{stickerLabel(printer.stickerNumber)}</h2>
         <p>
           {printer.brand} {printer.model}
         </p>

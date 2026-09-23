@@ -17,6 +17,7 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.hamcrest.Matchers.nullValue;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -107,7 +108,7 @@ class InventoryIntegrationTests {
     void usedLocationCanBeEditedWithoutChangingPrinterAssignmentAndCannotBeDeleted() throws Exception {
         long oldLocation = createLocation("ICT").get("id").asLong();
         long newLocation = createLocation("Accounting").get("id").asLong();
-        long printer = createPrinter(oldLocation, "ICT-PRN-001", null, "ACTIVE").get("id").asLong();
+        long printer = createPrinter(oldLocation, "ICT-PRN-001", "SN-USED", "ACTIVE").get("id").asLong();
         mvc.perform(put("/api/locations/{id}", oldLocation).contentType(APPLICATION_JSON)
                         .content("{\"department\":\"Changed\",\"section\":\"Updated\",\"version\":0}"))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.department").value("Changed"))
@@ -116,7 +117,7 @@ class InventoryIntegrationTests {
                 .andExpect(jsonPath("$.location.id").value(oldLocation))
                 .andExpect(jsonPath("$.location.department").value("Changed"));
         mvc.perform(delete("/api/locations/{id}", oldLocation)).andExpect(status().isConflict());
-        var edit = printerBody(newLocation, "ICT-PRN-001", null, "ACTIVE");
+        var edit = printerBody(newLocation, "ICT-PRN-001", "SN-USED", "ACTIVE");
         edit.put("version", 0);
         mvc.perform(put("/api/printers/{id}", printer).contentType(APPLICATION_JSON).content(json.writeValueAsString(edit)))
                 .andExpect(status().isConflict());
@@ -137,8 +138,8 @@ class InventoryIntegrationTests {
     void combinedFiltersPaginationAndLiteralWildcards() throws Exception {
         long firstLocation = createLocation("ICT").get("id").asLong();
         long secondLocation = createLocation("Accounting").get("id").asLong();
-        createPrinter(firstLocation, "ICT-PRN-001", null, "ACTIVE");
-        createPrinter(secondLocation, "ICT-PRN-002", null, "STORAGE");
+        createPrinter(firstLocation, "ICT-PRN-001", "SN-001", "ACTIVE");
+        createPrinter(secondLocation, "ICT-PRN-002", "SN-002", "STORAGE");
         mvc.perform(get("/api/printers").param("brand", "epson").param("status", "STORAGE")
                         .param("locationId", Long.toString(secondLocation)).param("search", "L5290"))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.totalElements").value(1))
@@ -159,14 +160,45 @@ class InventoryIntegrationTests {
     @ValueSource(strings = {"ACTIVE", "UNDER_REPAIR", "FOR_REPAIR", "STORAGE", "RETIRED", "DISPOSED"})
     void acceptsEachSupportedStatus(String printerStatus) throws Exception {
         long location = createLocation("ICT").get("id").asLong();
-        assertEquals(printerStatus, createPrinter(location, "ICT-PRN-001", null, printerStatus).get("status").asText());
+        assertEquals(printerStatus, createPrinter(location, "ICT-PRN-001", "SN-" + printerStatus, printerStatus).get("status").asText());
     }
 
     @Test
-    void unknownSerialNumbersAreStoredAsNullAndCanRepeat() throws Exception {
+    void serialNumbersAreRequiredAndWhitespaceIsRejected() throws Exception {
         long location = createLocation("ICT").get("id").asLong();
-        assertTrue(createPrinter(location, "ICT-PRN-001", "  ", "ACTIVE").get("serialNumber").isNull());
-        assertTrue(createPrinter(location, "ICT-PRN-002", null, "ACTIVE").get("serialNumber").isNull());
+        mvc.perform(post("/api/printers").contentType(APPLICATION_JSON)
+                        .content(json.writeValueAsString(printerBody(location, "ICT-PRN-001", "  ", "ACTIVE"))))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.fieldErrors.serialNumber")
+                        .value("Serial number is required"));
+        mvc.perform(post("/api/printers").contentType(APPLICATION_JSON)
+                        .content(json.writeValueAsString(printerBody(location, "ICT-PRN-002", null, "ACTIVE"))))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.fieldErrors.serialNumber")
+                        .value("Serial number is required"));
+    }
+
+    @Test
+    void serialNumberCannotBeClearedWhenEditing() throws Exception {
+        long location = createLocation("ICT").get("id").asLong();
+        JsonNode printer = createPrinter(location, "ICT-PRN-SERIAL", "SN-VALID", "ACTIVE");
+        Map<String, Object> edit = printerBody(location, "ICT-PRN-SERIAL", "   ", "ACTIVE");
+        edit.put("version", printer.get("version").asLong());
+        mvc.perform(put("/api/printers/{id}", printer.get("id").asLong()).contentType(APPLICATION_JSON)
+                        .content(json.writeValueAsString(edit)))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.fieldErrors.serialNumber")
+                        .value("Serial number is required"));
+    }
+
+    @Test
+    void stickerNumbersAreOptionalAndCanBeCleared() throws Exception {
+        long location = createLocation("ICT").get("id").asLong();
+        JsonNode first = createPrinter(location, null, "SN-OPTIONAL-1", "ACTIVE");
+        JsonNode second = createPrinter(location, "ICT-PRN-OPTIONAL", "SN-OPTIONAL-2", "ACTIVE");
+        assertTrue(first.get("stickerNumber").isNull());
+        Map<String, Object> edit = printerBody(location, null, "SN-OPTIONAL-2", "ACTIVE");
+        edit.put("version", second.get("version").asLong());
+        mvc.perform(put("/api/printers/{id}", second.get("id").asLong()).contentType(APPLICATION_JSON)
+                        .content(json.writeValueAsString(edit)))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.stickerNumber").value(nullValue()));
     }
 
     @Test
@@ -192,7 +224,7 @@ class InventoryIntegrationTests {
     void missingReferencesAre404AndInvalidCreationDoesNotWriteAPrinter() throws Exception {
         mvc.perform(get("/api/printers/9223372036854775807")).andExpect(status().isNotFound());
         mvc.perform(post("/api/printers").contentType(APPLICATION_JSON)
-                        .content(json.writeValueAsString(printerBody(Long.MAX_VALUE, "ICT-PRN-001", null, "ACTIVE"))))
+                        .content(json.writeValueAsString(printerBody(Long.MAX_VALUE, "ICT-PRN-001", "SN-MISSING-LOCATION", "ACTIVE"))))
                 .andExpect(status().isNotFound()).andExpect(jsonPath("$.message").value("Location not found."));
         assertEquals(0, jdbc.queryForObject("select count(*) from printers", Integer.class));
     }
@@ -206,7 +238,7 @@ class InventoryIntegrationTests {
         mvc.perform(put("/api/locations/{id}", location).contentType(APPLICATION_JSON)
                         .content("{\"department\":\"Accounting\",\"version\":9}"))
                 .andExpect(status().isConflict());
-        long printer = createPrinter(location, "ICT-PRN-001", null, "ACTIVE").get("id").asLong();
+        long printer = createPrinter(location, "ICT-PRN-001", "SN-001", "ACTIVE").get("id").asLong();
         mvc.perform(put("/api/printers/{id}", printer).contentType(APPLICATION_JSON)
                         .content(json.writeValueAsString(printerBody(location, "ICT-PRN-001", null, "ACTIVE"))))
                 .andExpect(status().isBadRequest());
@@ -215,7 +247,7 @@ class InventoryIntegrationTests {
     @Test
     void databaseEnforcesStickerUniquenessEvenOutsideTheService() throws Exception {
         long location = createLocation("ICT").get("id").asLong();
-        createPrinter(location, "ICT-PRN-001", null, "ACTIVE");
+        createPrinter(location, "ICT-PRN-001", "SN-001", "ACTIVE");
         assertThrows(DataIntegrityViolationException.class, () -> jdbc.update("""
                 insert into printers (brand, model, sticker_number, location_id, status, created_at, updated_at)
                 values ('Epson', 'L5290', ' ict-prn-001 ', ?, 'ACTIVE', now(), now())

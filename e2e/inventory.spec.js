@@ -23,8 +23,8 @@ test('empty installation: create location, add, view, edit, search, cancel and c
   const sticker = unique();
   await page.getByLabel('Brand *', { exact: true }).fill('Epson');
   await page.getByLabel('Model *', { exact: true }).fill('L5290');
-  await page.getByLabel('Sticker number *').fill(sticker);
-  await page.getByLabel('Serial number', { exact: true }).fill(`SN-${sticker}`);
+  await page.getByLabel('Sticker number', { exact: true }).fill(sticker);
+  await page.getByLabel('Serial number *', { exact: true }).fill(`SN-${sticker}`);
   await page.getByRole('button', { name: '+ New location' }).click();
   await page.getByLabel('Department *').fill('ICT Department');
   await page.getByLabel('Section', { exact: true }).fill('Operations');
@@ -76,7 +76,8 @@ test('duplicate identifiers and stale edits preserve input and explain conflicts
   await page.goto('/printers/new');
   await page.getByLabel('Brand *', { exact: true }).fill('Brother');
   await page.getByLabel('Model *', { exact: true }).fill('DCP-T720DW');
-  await page.getByLabel('Sticker number *').fill(printer.stickerNumber);
+  await page.getByLabel('Sticker number', { exact: true }).fill(printer.stickerNumber);
+  await page.getByLabel('Serial number *', { exact: true }).fill(`SN-DUP-${Date.now()}`);
   await page.getByLabel('Location *', { exact: true }).selectOption(String(data.locationId));
   await page.getByRole('button', { name: 'Add printer', exact: true }).click();
   await expect(page.getByRole('alert')).toContainText('Sticker number is already in use');
@@ -93,7 +94,7 @@ test('duplicate identifiers and stale edits preserve input and explain conflicts
 
 test('filters survive refresh and history; pagination and delete-last-row recover', async ({ page, request }) => {
   const { printer, location, data } = await seed(request);
-  const second = await request.post('/api/printers', { data: { ...data, stickerNumber: unique(), serialNumber: null, status: 'STORAGE' } });
+  const second = await request.post('/api/printers', { data: { ...data, stickerNumber: unique(), serialNumber: `${data.serialNumber}-2`, status: 'STORAGE' } });
   expect(second.status()).toBe(201);
   await page.goto(`/printers?locationId=${location.id}&size=1`);
   await expect(page.getByLabel('Location', { exact: true })).toHaveValue(String(location.id));

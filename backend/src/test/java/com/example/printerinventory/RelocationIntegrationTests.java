@@ -221,7 +221,7 @@ class RelocationIntegrationTests {
 
     private JsonNode printer(long location) throws Exception {
         JsonNode value = json.readTree(mvc.perform(post("/api/printers").contentType(APPLICATION_JSON)
-                        .content(json.writeValueAsString(Map.of("brand", "Epson", "model", "L5290", "stickerNumber", UUID.randomUUID().toString(),
+                        .content(json.writeValueAsString(Map.of("brand", "Epson", "model", "L5290", "serialNumber", UUID.randomUUID().toString(), "stickerNumber", UUID.randomUUID().toString(),
                                 "locationId", location, "status", "ACTIVE", "remarks", "Printer remarks"))))
                 .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString());
         printerIds.add(value.get("id").asLong()); return value;

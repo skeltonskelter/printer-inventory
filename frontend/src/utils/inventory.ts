@@ -14,3 +14,7 @@ export function locationLabel(location: Location) {
 export function displayDate(value: string) {
   return new Date(value).toLocaleString();
 }
+
+export function stickerLabel(value: string | null | undefined) {
+  return value || "No sticker number";
+}

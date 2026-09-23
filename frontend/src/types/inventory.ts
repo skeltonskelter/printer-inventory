@@ -22,7 +22,7 @@ export interface Printer {
   brand: string;
   model: string;
   serialNumber: string | null;
-  stickerNumber: string;
+  stickerNumber: string | null;
   location: Location;
   status: PrinterStatus;
   remarks: string | null;
@@ -34,7 +34,7 @@ export interface PrinterInput {
   brand: string;
   model: string;
   serialNumber: string | null;
-  stickerNumber: string;
+  stickerNumber: string | null;
   locationId: number;
   status: PrinterStatus;
   remarks: string | null;

@@ -102,9 +102,9 @@ class DashboardIntegrationTests {
 
     private long printer(long location, String status, int sequence) {
         return jdbc.queryForObject("""
-                insert into printers (brand, model, sticker_number, location_id, status, created_at, updated_at)
-                values ('Epson', 'L5290', ?, ?, ?, timestamptz '2026-01-01' + ? * interval '1 day', now()) returning id
-                """, Long.class, "DASH-" + sequence, location, status, sequence);
+                insert into printers (brand, model, serial_number, sticker_number, location_id, status, created_at, updated_at)
+                values ('Epson', 'L5290', ?, ?, ?, ?, timestamptz '2026-01-01' + ? * interval '1 day', now()) returning id
+                """, Long.class, "SERIAL-" + sequence, "DASH-" + sequence, location, status, sequence);
     }
 
     private void transfer(long printer, long from, long to, int sequence) {

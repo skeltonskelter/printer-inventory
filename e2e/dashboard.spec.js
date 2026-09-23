@@ -24,7 +24,7 @@ test('dashboard reflects transfers, status changes, deletion, and works on deskt
   const b = await (await request.post('/api/locations', { data: { department: 'Accounting Department', building: 'Annex', room: '102' } })).json();
   const printers = [];
   for (const [index, status] of ['ACTIVE', 'UNDER_REPAIR', 'STORAGE', 'RETIRED', 'FOR_REPAIR', 'DISPOSED'].entries()) {
-    const response = await request.post('/api/printers', { data: { brand: 'Epson', model: 'L5290', stickerNumber: `DASH-${index}`, locationId: a.id, status } });
+    const response = await request.post('/api/printers', { data: { brand: 'Epson', model: 'L5290', serialNumber: `DASH-SN-${index}`, stickerNumber: `DASH-${index}`, locationId: a.id, status } });
     expect(response.status()).toBe(201);
     printers.push(await response.json());
   }
