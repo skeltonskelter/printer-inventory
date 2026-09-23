@@ -13,6 +13,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
@@ -177,6 +178,44 @@ class InventoryIntegrationTests {
         assertTrue(csv.contains("\"Comma, \"\"quote\"\"\nnext\""));
         assertTrue(csv.contains("\"SN-CSV-2\",\"\",\"Epson\""));
         assertEquals(2, csv.split("SN-CSV-", -1).length - 1);
+    }
+
+    @Test
+    void csvImportPreviewsThenCreatesPrintersAndReusesMatchingLocations() throws Exception {
+        long existingLocation = createLocation("ICT").get("id").asLong();
+        String csv = "Serial Number,Sticker Number,Brand,Model,Status,Department,Section,Building,Floor,Room,Location Description,Remarks\r\n"
+                + "SN-IMPORT-1,,Epson,L5290,ACTIVE,ICT,Operations,Main,,101,,\"Comma, and \"\"quotes\"\"\"\r\n"
+                + "SN-IMPORT-2,STICKER-2,Canon,MF3010,Retired,Finance,,,,,,\"Second line\nremarks\"\r\n";
+        var file = new MockMultipartFile("file", "printers.csv", "text/csv", csv.getBytes(StandardCharsets.UTF_8));
+        mvc.perform(multipart("/api/printers/import/preview").file(file))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.totalRows").value(2))
+                .andExpect(jsonPath("$.validRows").value(2)).andExpect(jsonPath("$.invalidRows").value(0));
+        mvc.perform(multipart("/api/printers/import/confirm").file(file))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.imported").value(2));
+        mvc.perform(get("/api/printers").param("search", "SN-IMPORT"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.totalElements").value(2))
+                .andExpect(jsonPath("$.content[0].stickerNumber").value("STICKER-2"));
+        assertEquals(1, jdbc.queryForObject("select count(*) from printers where location_id = ?", Integer.class, existingLocation));
+        assertEquals(2, jdbc.queryForObject("select count(*) from locations", Integer.class));
+    }
+
+    @Test
+    void csvImportRejectsInvalidStatusesAndDuplicateSerialsWithoutWriting() throws Exception {
+        long location = createLocation("ICT").get("id").asLong();
+        createPrinter(location, "EXISTING", "SN-EXISTING", "ACTIVE");
+        String csv = "Serial Number,Sticker Number,Brand,Model,Status,Department\n"
+                + "SN-EXISTING,,Epson,L5290,ACTIVE,ICT\n"
+                + "SN-DUP,,Epson,L5290,ACTIVE,ICT\n"
+                + "SN-DUP,SECOND,Epson,L5290,DISPOSED,ICT\n"
+                + "   ,,Epson,L5290,ACTIVE,ICT\n";
+        var file = new MockMultipartFile("file", "invalid.csv", "text/csv", csv.getBytes(StandardCharsets.UTF_8));
+        mvc.perform(multipart("/api/printers/import/preview").file(file))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.totalRows").value(4))
+                .andExpect(jsonPath("$.validRows").value(1)).andExpect(jsonPath("$.invalidRows").value(3))
+                .andExpect(jsonPath("$.errors[0].message").value("Serial Number already exists."));
+        mvc.perform(multipart("/api/printers/import/confirm").file(file))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.imported").value(0));
+        assertEquals(1, jdbc.queryForObject("select count(*) from printers", Integer.class));
     }
 
     @ParameterizedTest

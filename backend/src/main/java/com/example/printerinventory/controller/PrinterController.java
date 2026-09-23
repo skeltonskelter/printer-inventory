@@ -3,6 +3,7 @@ package com.example.printerinventory.controller;
 import com.example.printerinventory.dto.*;
 import com.example.printerinventory.entity.PrinterStatus;
 import com.example.printerinventory.service.PrinterService;
+import com.example.printerinventory.service.PrinterImportService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
 import java.net.URI;
@@ -11,13 +12,18 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import java.time.LocalDate;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/api/printers")
 public class PrinterController {
     private final PrinterService printers;
+    private final PrinterImportService imports;
 
-    public PrinterController(PrinterService printers) { this.printers = printers; }
+    public PrinterController(PrinterService printers, PrinterImportService imports) {
+        this.printers = printers;
+        this.imports = imports;
+    }
 
     @GetMapping({"", "/search"})
     public PageResponse<PrinterResponse> list(
@@ -41,6 +47,26 @@ public class PrinterController {
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
                 .contentType(MediaType.parseMediaType("text/csv;charset=UTF-8"))
                 .body(printers.exportCsv(search, brand, locationId, status));
+    }
+
+    @GetMapping(value = "/import/template", produces = "text/csv")
+    public ResponseEntity<byte[]> importTemplate() {
+        byte[] template = "\uFEFFSerial Number,Sticker Number,Brand,Model,Status,Department,Section,Building,Floor,Room,Location Description,Remarks\r\n"
+                .getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"printer-inventory-template.csv\"")
+                .contentType(MediaType.parseMediaType("text/csv;charset=UTF-8"))
+                .body(template);
+    }
+
+    @PostMapping(value = "/import/preview", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public PrinterImportPreview previewImport(@RequestParam("file") MultipartFile file) {
+        return imports.preview(file);
+    }
+
+    @PostMapping(value = "/import/confirm", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public PrinterImportResult confirmImport(@RequestParam("file") MultipartFile file) {
+        return imports.confirm(file);
     }
 
     @GetMapping("/{id}")

@@ -7,6 +7,8 @@ import type {
   Page,
   Printer,
   PrinterInput,
+  PrinterImportPreview,
+  PrinterImportResult,
   Relocation,
   RelocationInput,
 } from "../types/inventory";
@@ -16,6 +18,16 @@ export const inventory = {
     (await api.get<Dashboard>("/dashboard", { signal })).data,
   list: async (params: URLSearchParams, signal?: AbortSignal) =>
     (await api.get<Page<Printer>>("/printers", { params, signal })).data,
+  previewImport: async (file: File) => {
+    const form = new FormData();
+    form.append("file", file);
+    return (await api.post<PrinterImportPreview>("/printers/import/preview", form)).data;
+  },
+  confirmImport: async (file: File) => {
+    const form = new FormData();
+    form.append("file", file);
+    return (await api.post<PrinterImportResult>("/printers/import/confirm", form)).data;
+  },
   get: async (id: string, signal?: AbortSignal) =>
     (await api.get<Printer>(`/printers/${encodeURIComponent(id)}`, { signal }))
       .data,

@@ -1,10 +1,10 @@
-import { useCallback, useState, type FormEvent } from "react";
+import { useCallback, useRef, useState, type ChangeEvent, type FormEvent } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { inventory } from "../api/inventory";
 import { useResource } from "../hooks/useResource";
 import { DeletePrinterDialog } from "../components/DeletePrinterDialog";
 import { LoadError, Loading, PrinterBadge } from "../components/InventoryUi";
-import { statusLabels, type Printer } from "../types/inventory";
+import { statusLabels, type Printer, type PrinterImportPreview } from "../types/inventory";
 import { locationLabel, stickerLabel } from "../utils/inventory";
 
 export function PrinterListPage() {
@@ -23,6 +23,11 @@ export function PrinterListPage() {
   const [deleting, setDeleting] = useState<Printer | null>(null);
   const [notice, setNotice] = useState("");
   const [exporting, setExporting] = useState(false);
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [importPreview, setImportPreview] = useState<PrinterImportPreview | null>(null);
+  const [importError, setImportError] = useState("");
+  const [importing, setImporting] = useState(false);
+  const fileInput = useRef<HTMLInputElement>(null);
 
   function exportCsv() {
     setExporting(true);
@@ -36,6 +41,56 @@ export function PrinterListPage() {
     link.click();
     link.remove();
     setExporting(false);
+  }
+
+  async function chooseImport(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    setImportPreview(null);
+    setImportError("");
+    setImportFile(null);
+    if (!file) return;
+    if (!file.name.toLowerCase().endsWith(".csv")) {
+      setImportError("Choose a CSV file.");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setImportError("CSV files must be 5 MB or smaller.");
+      return;
+    }
+    try {
+      setImportPreview(await inventory.previewImport(file));
+      setImportFile(file);
+    } catch {
+      setImportError("The CSV could not be read. Check the file and try again.");
+    }
+  }
+
+  function cancelImport() {
+    setImportFile(null);
+    setImportPreview(null);
+    setImportError("");
+    if (fileInput.current) fileInput.current.value = "";
+  }
+
+  async function confirmImport() {
+    if (!importFile || !importPreview || importPreview.invalidRows > 0) return;
+    setImporting(true);
+    setImportError("");
+    try {
+      const result = await inventory.confirmImport(importFile);
+      if (result.invalidRows > 0) {
+        setImportPreview({ totalRows: importPreview.totalRows, validRows: 0, invalidRows: result.invalidRows, errors: result.errors });
+        return;
+      }
+      setNotice(`Imported ${result.imported} printer${result.imported === 1 ? "" : "s"}.`);
+      cancelImport();
+      list.reload();
+      locations.reload();
+    } catch {
+      setImportError("The import could not be completed. No printers were imported.");
+    } finally {
+      setImporting(false);
+    }
   }
 
   function filter(event: FormEvent<HTMLFormElement>) {
@@ -103,6 +158,11 @@ export function PrinterListPage() {
         <Link to="/printers/new" className="btn btn-primary">
           + Add printer
         </Link>
+        <button type="button" className="btn btn-outline-secondary" onClick={() => fileInput.current?.click()}>
+          Import CSV
+        </button>
+        <a className="btn btn-outline-secondary" href="/api/printers/import/template">CSV template</a>
+        <input ref={fileInput} className="d-none" type="file" accept=".csv,text/csv" onChange={chooseImport} />
         <button type="button" className="btn btn-outline-primary" onClick={exportCsv} disabled={exporting}>
           {exporting ? "Exporting…" : "Export CSV"}
         </button>
@@ -111,6 +171,28 @@ export function PrinterListPage() {
         <div role="status" className="alert alert-success">
           {notice}
         </div>
+      )}
+      {importError && <div className="alert alert-danger" role="alert">{importError}</div>}
+      {importPreview && (
+        <section className="panel mb-4" aria-label="CSV import preview">
+          <h2>Import preview</h2>
+          <p>Total rows: {importPreview.totalRows} · Valid rows: {importPreview.validRows} · Invalid rows: {importPreview.invalidRows}</p>
+          {importPreview.errors.length > 0 && (
+            <ul className="mb-3">
+              {importPreview.errors.map((error, index) => (
+                <li key={`${error.row}-${index}`}>{error.row ? `Row ${error.row}: ` : ""}{error.message}</li>
+              ))}
+            </ul>
+          )}
+          {importPreview.invalidRows > 0 && <p className="text-danger">Correct every invalid row before confirming the import.</p>}
+          <div className="d-flex gap-2 flex-wrap">
+            <button className="btn btn-primary" type="button" disabled={importPreview.invalidRows > 0 || importing} onClick={confirmImport}>
+              {importing ? "Importingâ€¦" : "Confirm import"}
+            </button>
+            <button className="btn btn-outline-secondary" type="button" disabled={importing} onClick={cancelImport}>Cancel</button>
+            <a className="btn btn-outline-secondary" href="/api/printers/import/template">Download CSV template</a>
+          </div>
+        </section>
       )}
       <form
         key={query}

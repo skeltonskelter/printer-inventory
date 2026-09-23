@@ -51,6 +51,24 @@ export interface ApiProblem {
   fieldErrors: Record<string, string>;
 }
 
+export interface ImportRowError {
+  row: number;
+  message: string;
+}
+
+export interface PrinterImportPreview {
+  totalRows: number;
+  validRows: number;
+  invalidRows: number;
+  errors: ImportRowError[];
+}
+
+export interface PrinterImportResult {
+  imported: number;
+  invalidRows: number;
+  errors: ImportRowError[];
+}
+
 export interface RelocationInput {
   newLocationId: number;
   relocationDate: string;
