@@ -61,6 +61,7 @@ function RelocateForm({
   const [locations, setLocations] = useState(initialLocations);
   const [destinationId, setDestinationId] = useState("");
   const [showLocation, setShowLocation] = useState(false);
+  const [editingLocation, setEditingLocation] = useState<Location | null>(null);
   const [problem, setProblem] = useState<ApiProblem | null>(null);
   const [busy, setBusy] = useState(false);
   const today = new Date();
@@ -109,11 +110,22 @@ function RelocateForm({
       </section>
       {showLocation && (
         <NewLocationForm
-          onCancel={() => setShowLocation(false)}
-          onCreated={(location) => {
-            setLocations((values) => [...values, location]);
-            setDestinationId(String(location.id));
+          location={editingLocation ?? undefined}
+          onCancel={() => {
             setShowLocation(false);
+            setEditingLocation(null);
+          }}
+          onCreated={(location) => {
+            setLocations((values) =>
+              editingLocation
+                ? values.map((value) =>
+                    value.id === location.id ? location : value,
+                  )
+                : [...values, location],
+            );
+            if (!editingLocation) setDestinationId(String(location.id));
+            setShowLocation(false);
+            setEditingLocation(null);
           }}
         />
       )}
@@ -137,21 +149,40 @@ function RelocateForm({
               <label className="form-label" htmlFor="new-location">
                 New location *
               </label>
-              <select
-                id="new-location"
-                className={`form-select ${problem?.fieldErrors.newLocationId ? "is-invalid" : ""}`}
-                value={destinationId}
-                onChange={(event) => setDestinationId(event.target.value)}
-                required
-                aria-describedby="destination-help destination-error"
-              >
-                <option value="">Choose a different location</option>
-                {destinations.map((location) => (
-                  <option key={location.id} value={location.id}>
-                    {locationLabel(location)}
-                  </option>
-                ))}
-              </select>
+              <div className="d-flex gap-2">
+                <select
+                  id="new-location"
+                  className={`form-select ${problem?.fieldErrors.newLocationId ? "is-invalid" : ""}`}
+                  value={destinationId}
+                  onChange={(event) => setDestinationId(event.target.value)}
+                  required
+                  aria-describedby="destination-help destination-error"
+                >
+                  <option value="">Choose a different location</option>
+                  {destinations.map((location) => (
+                    <option key={location.id} value={location.id}>
+                      {locationLabel(location)}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  className="btn btn-outline-secondary text-nowrap"
+                  aria-label="Edit selected location"
+                  disabled={!destinationId || showLocation}
+                  onClick={() => {
+                    const selected = locations.find(
+                      (location) => String(location.id) === destinationId,
+                    );
+                    if (selected) {
+                      setEditingLocation(selected);
+                      setShowLocation(true);
+                    }
+                  }}
+                >
+                  Edit location
+                </button>
+              </div>
               <div className="invalid-feedback" id="destination-error">
                 {problem?.fieldErrors.newLocationId}
               </div>

@@ -30,6 +30,10 @@ export const inventory = {
     (await api.get<Location[]>("/locations", { signal })).data,
   createLocation: async (input: Record<string, string>) =>
     (await api.post<Location>("/locations", input)).data,
+  updateLocation: async (
+    id: number,
+    input: Record<string, string | number>,
+  ) => (await api.put<Location>(`/locations/${id}`, input)).data,
   relocate: async (id: number, input: RelocationInput) =>
     (await api.post<Printer>(`/printers/${id}/relocate`, input)).data,
   relocations: async (id: number, signal?: AbortSignal) =>

@@ -5,9 +5,11 @@ import type { ApiProblem, Location } from "../types/inventory";
 export function NewLocationForm({
   onCreated,
   onCancel,
+  location,
 }: {
   onCreated: (location: Location) => void;
   onCancel: () => void;
+  location?: Location;
 }) {
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<ApiProblem | null>(null);
@@ -26,7 +28,13 @@ export function NewLocationForm({
     setBusy(true);
     setProblem(null);
     try {
-      onCreated(await inventory.createLocation(values));
+      const saved = location
+        ? await inventory.updateLocation(location.id, {
+            ...values,
+            version: location.version,
+          })
+        : await inventory.createLocation(values);
+      onCreated(saved);
     } catch (error) {
       setProblem(apiProblem(error));
       setBusy(false);
@@ -35,9 +43,11 @@ export function NewLocationForm({
   return (
     <section
       className="panel inventory-form mb-4"
-      aria-labelledby="new-location-title"
+      aria-labelledby="location-form-title"
     >
-      <h2 id="new-location-title">New location</h2>
+      <h2 id="location-form-title">
+        {location ? "Edit location" : "New location"}
+      </h2>
       <p>
         Give the location a department and add any details that help you find
         it.
@@ -66,16 +76,20 @@ export function NewLocationForm({
                 }
                 key={name}
               >
-                <label className="form-label" htmlFor={`new-${name}`}>
+                <label
+                  className="form-label"
+                  htmlFor={`${location ? `edit-${location.id}` : "new"}-${name}`}
+                >
                   {label}
                   {name === "department" ? " *" : ""}
                 </label>
                 <input
                   autoFocus={name === "department"}
-                  id={`new-${name}`}
+                  id={`${location ? `edit-${location.id}` : "new"}-${name}`}
                   name={name}
                   maxLength={max}
                   required={name === "department"}
+                  defaultValue={location?.[name] ?? ""}
                   className={`form-control ${problem?.fieldErrors[name] ? "is-invalid" : ""}`}
                   aria-describedby={
                     problem?.fieldErrors[name] ? `new-${name}-error` : undefined
@@ -89,14 +103,14 @@ export function NewLocationForm({
           </div>
           <div className="d-flex gap-2 mt-4">
             <button type="submit" className="btn btn-primary">
-              {busy ? "Saving…" : "Save location"}
+              {busy ? "Saving…" : location ? "Save changes" : "Save location"}
             </button>
             <button
               type="button"
               className="btn btn-outline-secondary"
               onClick={onCancel}
             >
-              Cancel location
+              {location ? "Cancel" : "Cancel location"}
             </button>
           </div>
         </fieldset>

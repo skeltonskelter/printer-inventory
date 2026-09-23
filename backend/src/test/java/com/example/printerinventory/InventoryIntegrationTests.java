@@ -104,13 +104,17 @@ class InventoryIntegrationTests {
     }
 
     @Test
-    void usedLocationCannotBeEditedOrDeletedAndPrinterCannotBeMovedSilently() throws Exception {
+    void usedLocationCanBeEditedWithoutChangingPrinterAssignmentAndCannotBeDeleted() throws Exception {
         long oldLocation = createLocation("ICT").get("id").asLong();
         long newLocation = createLocation("Accounting").get("id").asLong();
         long printer = createPrinter(oldLocation, "ICT-PRN-001", null, "ACTIVE").get("id").asLong();
         mvc.perform(put("/api/locations/{id}", oldLocation).contentType(APPLICATION_JSON)
-                        .content("{\"department\":\"Changed\",\"version\":0}"))
-                .andExpect(status().isConflict());
+                        .content("{\"department\":\"Changed\",\"section\":\"Updated\",\"version\":0}"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.department").value("Changed"))
+                .andExpect(jsonPath("$.section").value("Updated"));
+        mvc.perform(get("/api/printers/{id}", printer)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.location.id").value(oldLocation))
+                .andExpect(jsonPath("$.location.department").value("Changed"));
         mvc.perform(delete("/api/locations/{id}", oldLocation)).andExpect(status().isConflict());
         var edit = printerBody(newLocation, "ICT-PRN-001", null, "ACTIVE");
         edit.put("version", 0);

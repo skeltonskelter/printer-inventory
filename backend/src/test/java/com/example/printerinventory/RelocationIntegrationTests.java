@@ -126,13 +126,13 @@ class RelocationIntegrationTests {
         move(id, b, today(), 0, 200);
         mvc.perform(put("/api/locations/{id}", a).contentType(APPLICATION_JSON)
                         .content("{\"department\":\"Renamed\",\"version\":0}"))
-                .andExpect(status().isConflict());
+                .andExpect(status().isOk()).andExpect(jsonPath("$.department").value("Renamed"));
         mvc.perform(delete("/api/locations/{id}", a)).andExpect(status().isConflict());
         mvc.perform(delete("/api/printers/{id}", id)).andExpect(status().isNoContent());
         mvc.perform(get("/api/printers/{id}", id)).andExpect(status().isNotFound());
         JsonNode retained = history(id);
         assertEquals(1, retained.size());
-        assertEquals("ICT", retained.get(0).get("previousLocation").get("department").asText());
+        assertEquals("Renamed", retained.get(0).get("previousLocation").get("department").asText());
         move(id, a, today(), 2, 404);
         mvc.perform(delete("/api/locations/{id}", b)).andExpect(status().isConflict());
     }

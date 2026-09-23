@@ -73,6 +73,7 @@ function PrinterForm({
     printer ? String(printer.location.id) : "",
   );
   const [showLocation, setShowLocation] = useState(false);
+  const [editingLocation, setEditingLocation] = useState<Location | null>(null);
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<ApiProblem | null>(null);
   const [notice, setNotice] = useState("");
@@ -128,12 +129,27 @@ function PrinterForm({
     <>
       {showLocation && (
         <NewLocationForm
-          onCancel={() => setShowLocation(false)}
-          onCreated={(location) => {
-            setLocations((values) => [...values, location]);
-            setLocationId(String(location.id));
+          location={editingLocation ?? undefined}
+          onCancel={() => {
             setShowLocation(false);
-            setNotice(`Location ${location.department} added and selected.`);
+            setEditingLocation(null);
+          }}
+          onCreated={(location) => {
+            setLocations((values) =>
+              editingLocation
+                ? values.map((value) =>
+                    value.id === location.id ? location : value,
+                  )
+                : [...values, location],
+            );
+            if (!editingLocation) setLocationId(String(location.id));
+            setShowLocation(false);
+            setNotice(
+              editingLocation
+                ? `Location ${location.department} updated.`
+                : `Location ${location.department} added and selected.`,
+            );
+            setEditingLocation(null);
           }}
         />
       )}
@@ -200,22 +216,41 @@ function PrinterForm({
               <label htmlFor="locationId" className="form-label">
                 Location *
               </label>
-              <select
-                id="locationId"
-                className={`form-select${invalid("locationId")}`}
-                value={locationId}
-                onChange={(event) => setLocationId(event.target.value)}
-                required
-                disabled={!!printer}
-                aria-describedby="location-help location-error"
-              >
-                <option value="">Choose a location</option>
-                {locations.map((location) => (
-                  <option key={location.id} value={location.id}>
-                    {locationLabel(location)}
-                  </option>
-                ))}
-              </select>
+              <div className="d-flex gap-2">
+                <select
+                  id="locationId"
+                  className={`form-select${invalid("locationId")}`}
+                  value={locationId}
+                  onChange={(event) => setLocationId(event.target.value)}
+                  required
+                  disabled={!!printer}
+                  aria-describedby="location-help location-error"
+                >
+                  <option value="">Choose a location</option>
+                  {locations.map((location) => (
+                    <option key={location.id} value={location.id}>
+                      {locationLabel(location)}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  className="btn btn-outline-secondary text-nowrap"
+                  aria-label="Edit selected location"
+                  disabled={!locationId || showLocation}
+                  onClick={() => {
+                    const selected = locations.find(
+                      (location) => String(location.id) === locationId,
+                    );
+                    if (selected) {
+                      setEditingLocation(selected);
+                      setShowLocation(true);
+                    }
+                  }}
+                >
+                  Edit location
+                </button>
+              </div>
               <div id="location-error" className="invalid-feedback">
                 {problem?.fieldErrors.locationId}
               </div>

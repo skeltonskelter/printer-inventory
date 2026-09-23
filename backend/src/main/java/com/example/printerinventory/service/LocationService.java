@@ -45,7 +45,6 @@ public class LocationService {
     public LocationResponse update(long id, LocationRequest request) {
         Location location = findForUpdate(id);
         checkVersion(request.version(), location.getVersion());
-        ensureUnused(id);
         apply(location, request);
         return LocationResponse.from(locations.saveAndFlush(location));
     }

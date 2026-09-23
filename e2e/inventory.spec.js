@@ -32,6 +32,11 @@ test('empty installation: create location, add, view, edit, search, cancel and c
   await page.getByLabel('Room', { exact: true }).fill('101');
   await page.getByRole('button', { name: 'Save location' }).click();
   await expect(page.getByRole('status')).toContainText('added and selected');
+  await page.getByRole('button', { name: 'Edit selected location', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Edit location', exact: true })).toBeVisible();
+  await page.getByLabel('Section', { exact: true }).fill('Operations Updated');
+  await page.getByRole('button', { name: 'Save changes', exact: true }).click();
+  await expect(page.getByRole('status')).toContainText('updated');
   await expect(page.getByLabel('Brand *', { exact: true })).toHaveValue('Epson');
   await page.getByRole('button', { name: 'Add printer', exact: true }).click();
   await expect(page.getByRole('heading', { name: sticker, exact: true })).toBeVisible();
