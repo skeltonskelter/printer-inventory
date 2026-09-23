@@ -2,6 +2,7 @@ package com.example.printerinventory;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.nio.charset.StandardCharsets;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -154,6 +155,28 @@ class InventoryIntegrationTests {
                 .andExpect(status().isOk()).andExpect(jsonPath("$.totalElements").value(0));
         mvc.perform(get("/api/printers").param("search", "' OR 1=1 --"))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.totalElements").value(0));
+    }
+
+    @Test
+    void csvExportIncludesAllFilteredRowsAndEscapesOptionalText() throws Exception {
+        long location = createLocation("ICT").get("id").asLong();
+        long first = createPrinter(location, "ICT-PRN-CSV", "SN-CSV-1", "ACTIVE").get("id").asLong();
+        createPrinter(location, null, "SN-CSV-2", "RETIRED");
+        mvc.perform(put("/api/printers/{id}", first).contentType(APPLICATION_JSON)
+                        .content(json.writeValueAsString(Map.of(
+                                "brand", "Epson", "model", "L5290", "stickerNumber", "ICT-PRN-CSV",
+                                "serialNumber", "SN-CSV-1", "locationId", location, "status", "ACTIVE",
+                                "remarks", "Comma, \"quote\"\nnext", "version", 0))))
+                .andExpect(status().isOk());
+        var response = mvc.perform(get("/api/printers/export").param("search", "SN-CSV"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Content-Disposition", org.hamcrest.Matchers.containsString("printer-inventory-")))
+                .andReturn().getResponse();
+        String csv = new String(response.getContentAsByteArray(), StandardCharsets.UTF_8);
+        assertTrue(csv.startsWith("\uFEFFSerial Number,Sticker Number,Brand,Model,Status"));
+        assertTrue(csv.contains("\"Comma, \"\"quote\"\"\nnext\""));
+        assertTrue(csv.contains("\"SN-CSV-2\",\"\",\"Epson\""));
+        assertEquals(2, csv.split("SN-CSV-", -1).length - 1);
     }
 
     @ParameterizedTest

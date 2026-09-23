@@ -7,6 +7,8 @@ import com.example.printerinventory.repository.*;
 import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import java.nio.charset.StandardCharsets;
+import java.time.format.DateTimeFormatter;
 
 import static org.springframework.http.HttpStatus.*;
 
@@ -26,6 +28,39 @@ public class PrinterService {
         var results = printers.findAll(PrinterSpecifications.matching(search, brand, locationId, status),
                 PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "id")));
         return PageResponse.from(results.map(PrinterResponse::from));
+    }
+
+    public byte[] exportCsv(String search, String brand, Long locationId, PrinterStatus status) {
+        var printersToExport = printers.findAll(
+                PrinterSpecifications.matching(search, brand, locationId, status),
+                Sort.by(Sort.Direction.DESC, "id"));
+        var csv = new StringBuilder("Serial Number,Sticker Number,Brand,Model,Status,Department,Section,Building,Floor,Room,Location Description,Remarks,Date Added,Last Updated\r\n");
+        for (var printer : printersToExport) {
+            var location = printer.getLocation();
+            csv.append(row(
+                    printer.getSerialNumber(), printer.getStickerNumber(), printer.getBrand(), printer.getModel(),
+                    printer.getStatus().name(), location.getDepartment(), location.getSection(), location.getBuilding(),
+                    location.getFloor(), location.getRoom(), location.getDescription(), printer.getRemarks(),
+                    DateTimeFormatter.ISO_INSTANT.format(printer.getCreatedAt()),
+                    DateTimeFormatter.ISO_INSTANT.format(printer.getUpdatedAt())));
+        }
+        // BOM lets Excel recognize UTF-8 reliably while preserving all CSV data.
+        return ("\uFEFF" + csv).getBytes(StandardCharsets.UTF_8);
+    }
+
+    private static String row(String... values) {
+        var result = new StringBuilder();
+        for (int i = 0; i < values.length; i++) {
+            if (i > 0) result.append(',');
+            result.append(cell(values[i]));
+        }
+        return result.append("\r\n").toString();
+    }
+
+    private static String cell(String value) {
+        if (value == null) value = "";
+        if (!value.isEmpty() && "=+-@".indexOf(value.charAt(0)) >= 0) value = "'" + value;
+        return '"' + value.replace("\"", "\"\"") + '"';
     }
 
     public PrinterResponse get(long id) { return PrinterResponse.from(find(id)); }

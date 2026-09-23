@@ -26,6 +26,9 @@ public interface PrinterRepository extends JpaRepository<Printer, Long>, JpaSpec
     @EntityGraph(attributePaths = "location")
     Page<Printer> findAll(Specification<Printer> specification, Pageable pageable);
 
+    @EntityGraph(attributePaths = "location")
+    List<Printer> findAll(Specification<Printer> specification, org.springframework.data.domain.Sort sort);
+
     Optional<Printer> findByIdAndDeletedAtIsNull(long id);
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select p from Printer p where p.id = :id and p.deletedAt is null")

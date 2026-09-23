@@ -22,6 +22,21 @@ export function PrinterListPage() {
   );
   const [deleting, setDeleting] = useState<Printer | null>(null);
   const [notice, setNotice] = useState("");
+  const [exporting, setExporting] = useState(false);
+
+  function exportCsv() {
+    setExporting(true);
+    const exportParams = new URLSearchParams(params);
+    exportParams.delete("page");
+    exportParams.delete("size");
+    const link = document.createElement("a");
+    link.href = `/api/printers/export?${exportParams.toString()}`;
+    link.download = `printer-inventory-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setExporting(false);
+  }
 
   function filter(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -88,6 +103,9 @@ export function PrinterListPage() {
         <Link to="/printers/new" className="btn btn-primary">
           + Add printer
         </Link>
+        <button type="button" className="btn btn-outline-primary" onClick={exportCsv} disabled={exporting}>
+          {exporting ? "Exporting…" : "Export CSV"}
+        </button>
       </div>
       {notice && (
         <div role="status" className="alert alert-success">
