@@ -155,17 +155,16 @@ export function PrinterListPage() {
           <h1>Printers</h1>
           <p>Keep every printer accounted for, wherever it belongs.</p>
         </div>
-        <Link to="/printers/new" className="btn btn-primary">
-          + Add printer
-        </Link>
-        <button type="button" className="btn btn-outline-secondary" onClick={() => fileInput.current?.click()}>
-          Import CSV
-        </button>
-        <a className="btn btn-outline-secondary" href="/api/printers/import/template">CSV template</a>
-        <input ref={fileInput} className="d-none" type="file" accept=".csv,text/csv" onChange={chooseImport} />
+        <div className="printer-csv-actions">
+          <a className="btn btn-outline-secondary" href="/api/printers/import/template">CSV template</a>
+          <button type="button" className="btn btn-outline-secondary" onClick={() => fileInput.current?.click()}>
+            Import CSV
+          </button>
+          <input ref={fileInput} className="d-none" type="file" accept=".csv,text/csv" onChange={chooseImport} />
         <button type="button" className="btn btn-outline-primary" onClick={exportCsv} disabled={exporting}>
           {exporting ? "Exporting…" : "Export CSV"}
-        </button>
+          </button>
+        </div>
       </div>
       {notice && (
         <div role="status" className="alert alert-success">
@@ -266,20 +265,25 @@ export function PrinterListPage() {
             </select>
           </div>
         </div>
-        <div className="d-flex gap-2 mt-3">
-          <button className="btn btn-primary" type="submit">
-            Apply filters
-          </button>
-          <button
-            className="btn btn-outline-secondary"
-            type="button"
-            onClick={() => {
-              setParams({});
-              setNotice("");
-            }}
-          >
-            Clear filters
-          </button>
+        <div className="printer-filter-actions mt-3">
+          <div className="d-flex gap-2 flex-wrap">
+            <button className="btn btn-primary" type="submit">
+              Apply filters
+            </button>
+            <button
+              className="btn btn-outline-secondary"
+              type="button"
+              onClick={() => {
+                setParams({});
+                setNotice("");
+              }}
+            >
+              Clear filters
+            </button>
+          </div>
+          <Link to="/printers/new" className="btn btn-primary">
+            + Add printer
+          </Link>
         </div>
         {locations.error && (
           <div className="mt-3">
