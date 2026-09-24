@@ -27,6 +27,11 @@ export default function App() {
         Skip to content
       </a>
       <aside className="sidebar">
+        <img
+          className="sidebar-logo"
+          src="/ictlogo.png"
+          alt="ICT Department logo"
+        />
         <Link
           to="/"
           className="brand-lockup"
@@ -51,10 +56,6 @@ export default function App() {
             <Icon name="server" /> System overview
           </NavLink>
         </nav>
-        <div className="sidebar-note">
-          <span className="phase-dot" /> Inventory workspace
-          <p>A home for every printer.</p>
-        </div>
       </aside>
       <div className="main-shell">
         <header className="topbar">
@@ -62,7 +63,6 @@ export default function App() {
             Workspace <span className="breadcrumb-divider">/</span>{" "}
             <strong>{section}</strong>
           </span>
-          <span className="internal-label">Internal application</span>
         </header>
         <main id="main-content" className="main-content">
           <Routes>
@@ -99,7 +99,7 @@ export default function App() {
           </Routes>
         </main>
         <footer className="app-footer">
-          Printer Inventory <span>Organization workspace</span>
+          All rights reserved. Copyright © 2026, Designed by ICT Department.
         </footer>
       </div>
     </div>
