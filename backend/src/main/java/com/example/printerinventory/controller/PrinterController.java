@@ -51,7 +51,7 @@ public class PrinterController {
 
     @GetMapping(value = "/import/template", produces = "text/csv")
     public ResponseEntity<byte[]> importTemplate() {
-        byte[] template = "\uFEFFSerial Number,Sticker Number,Brand,Model,Status,Department,Section,Building,Floor,Room,Location Description,Remarks\r\n"
+        byte[] template = "\uFEFFSerial Number,Sticker Number,Brand,Model,Supplier,Date of Purchase,Status,Department,Section,Building,Floor,Room,Location Description,Remarks\r\n"
                 .getBytes(java.nio.charset.StandardCharsets.UTF_8);
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"printer-inventory-template.csv\"")

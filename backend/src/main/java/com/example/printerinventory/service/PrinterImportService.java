@@ -6,6 +6,7 @@ import com.example.printerinventory.repository.LocationRepository;
 import com.example.printerinventory.repository.PrinterRepository;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDate;
 import java.util.*;
 import org.apache.commons.csv.*;
 import org.springframework.http.HttpStatus;
@@ -53,7 +54,7 @@ public class PrinterImportService {
                     locationId = created.id();
                     knownLocations.put(key, locationId);
                 }
-                printerService.create(new PrinterRequest(row.brand(), row.model(), row.serialNumber(), row.stickerNumber(),
+                printerService.create(new PrinterRequest(row.brand(), row.model(), row.supplier(), parseDateOfPurchase(row.dateOfPurchase()), row.serialNumber(), row.stickerNumber(),
                         locationId, parseStatus(row.statusText()), row.remarks(), null));
             }
             return new PrinterImportResult(parsed.rows().size(), 0, List.of());
@@ -85,7 +86,8 @@ public class PrinterImportService {
                 totalRows++;
                 long rowNumber = record.getRecordNumber() + 1;
                 Row row = new Row(value(record, headers, "Serial Number"), value(record, headers, "Sticker Number"),
-                        value(record, headers, "Brand"), value(record, headers, "Model"), value(record, headers, "Status"),
+                        value(record, headers, "Brand"), value(record, headers, "Model"), value(record, headers, "Supplier"),
+                        value(record, headers, "Date of Purchase"), value(record, headers, "Status"),
                         value(record, headers, "Department"), value(record, headers, "Section"), value(record, headers, "Building"),
                         value(record, headers, "Floor"), value(record, headers, "Room"), value(record, headers, "Location Description"),
                         value(record, headers, "Remarks"));
@@ -107,9 +109,12 @@ public class PrinterImportService {
         if (row.statusText() == null) return "Status is required.";
         if (row.serialNumber().length() > 120 || row.brand().length() > 100 || row.model().length() > 120) return "A required field exceeds its maximum length.";
         if (row.department().length() > 120 || tooLong(row.section(), 120) || tooLong(row.building(), 120) || tooLong(row.floor(), 50)
-                || tooLong(row.room(), 80) || tooLong(row.description(), 1000) || tooLong(row.remarks(), 2000) || tooLong(row.stickerNumber(), 80)) return "A location or optional field exceeds its maximum length.";
+                || tooLong(row.room(), 80) || tooLong(row.description(), 1000) || tooLong(row.remarks(), 2000)
+                || tooLong(row.stickerNumber(), 80) || tooLong(row.supplier(), 200)) return "A location or optional field exceeds its maximum length.";
         try { parseStatus(row.statusText()); }
         catch (IllegalArgumentException exception) { return "Invalid status: " + row.statusText() + "."; }
+        try { parseDateOfPurchase(row.dateOfPurchase()); }
+        catch (IllegalArgumentException exception) { return "Invalid Date of Purchase."; }
         String serialKey = row.serialNumber().toLowerCase(Locale.ROOT);
         if (!serials.add(serialKey)) return "Serial Number is duplicated in this CSV.";
         if (printers.existsBySerialNumberIgnoreCaseAndIdNot(row.serialNumber(), 0)) return "Serial Number already exists.";
@@ -125,6 +130,9 @@ public class PrinterImportService {
     private static PrinterStatus parseStatus(String value) {
         return PrinterStatus.valueOf(value.trim().toUpperCase(Locale.ROOT).replaceAll("\\s+", "_"));
     }
+    private static LocalDate parseDateOfPurchase(String value) {
+        return value == null ? null : LocalDate.parse(value);
+    }
     private static String value(CSVRecord record, Map<String, String> headers, String header) {
         String actual = headers.get(header);
         return actual == null ? null : InputText.optional(record.get(actual));
@@ -135,7 +143,8 @@ public class PrinterImportService {
     private static String normalized(String value) { return value == null ? "" : value.trim().toLowerCase(Locale.ROOT); }
     private static Parsed error(long row, String message) { return new Parsed(0, List.of(), List.of(new ImportRowError(row, message))); }
     private record Parsed(long totalRows, List<Row> rows, List<ImportRowError> errors) {}
-    private record Row(String serialNumber, String stickerNumber, String brand, String model, String statusText,
+    private record Row(String serialNumber, String stickerNumber, String brand, String model, String supplier,
+                       String dateOfPurchase, String statusText,
                        String department, String section, String building, String floor, String room,
                        String description, String remarks) {}
 }

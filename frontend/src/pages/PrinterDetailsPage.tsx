@@ -84,6 +84,18 @@ export function PrinterDetailsPage() {
                       <dd>{printer.model}</dd>
                     </div>
                     <div>
+                      <dt>Supplier</dt>
+                      <dd>{printer.supplier || "Not recorded"}</dd>
+                    </div>
+                    <div>
+                      <dt>Date of purchase</dt>
+                      <dd>
+                        {printer.dateOfPurchase
+                          ? new Date(`${printer.dateOfPurchase}T00:00:00`).toLocaleDateString()
+                          : "Not recorded"}
+                      </dd>
+                    </div>
+                    <div>
                       <dt>Date added</dt>
                       <dd>{displayDate(printer.createdAt)}</dd>
                     </div>

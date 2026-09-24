@@ -34,11 +34,12 @@ public class PrinterService {
         var printersToExport = printers.findAll(
                 PrinterSpecifications.matching(search, brand, locationId, status),
                 Sort.by(Sort.Direction.DESC, "id"));
-        var csv = new StringBuilder("Serial Number,Sticker Number,Brand,Model,Status,Department,Section,Building,Floor,Room,Location Description,Remarks,Date Added,Last Updated\r\n");
+        var csv = new StringBuilder("Serial Number,Sticker Number,Brand,Model,Supplier,Date of Purchase,Status,Department,Section,Building,Floor,Room,Location Description,Remarks,Date Added,Last Updated\r\n");
         for (var printer : printersToExport) {
             var location = printer.getLocation();
             csv.append(row(
                     printer.getSerialNumber(), printer.getStickerNumber(), printer.getBrand(), printer.getModel(),
+                    printer.getSupplier(), printer.getDateOfPurchase() == null ? null : printer.getDateOfPurchase().toString(),
                     printer.getStatus().name(), location.getDepartment(), location.getSection(), location.getBuilding(),
                     location.getFloor(), location.getRoom(), location.getDescription(), printer.getRemarks(),
                     DateTimeFormatter.ISO_INSTANT.format(printer.getCreatedAt()),
@@ -107,7 +108,8 @@ public class PrinterService {
         if (serial != null && printers.existsBySerialNumberIgnoreCaseAndIdNot(serial, excludedId)) {
             throw new ApiException(CONFLICT, "Serial number is already in use, including retained deleted printers.");
         }
-        printer.update(request.brand().trim(), request.model().trim(), serial, sticker,
+        printer.update(request.brand().trim(), request.model().trim(), InputText.optional(request.supplier()),
+                request.dateOfPurchase(), serial, sticker,
                 request.status(), InputText.optional(request.remarks()));
     }
 }

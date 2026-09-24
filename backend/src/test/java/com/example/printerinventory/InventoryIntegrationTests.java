@@ -85,6 +85,26 @@ class InventoryIntegrationTests {
     }
 
     @Test
+    void optionalSupplierAndPurchaseDateCanBeCreatedEditedAndCleared() throws Exception {
+        long location = createLocation("ICT").get("id").asLong();
+        var body = printerBody(location, "SUPPLIER-1", "SN-SUPPLIER-1", "ACTIVE");
+        body.put("supplier", "Epson Authorized Dealer");
+        body.put("dateOfPurchase", "2026-09-15");
+        JsonNode created = json.readTree(mvc.perform(post("/api/printers").contentType(APPLICATION_JSON)
+                        .content(json.writeValueAsString(body))).andExpect(status().isCreated()).andReturn()
+                .getResponse().getContentAsString());
+        assertEquals("Epson Authorized Dealer", created.get("supplier").asText());
+        assertEquals("2026-09-15", created.get("dateOfPurchase").asText());
+        body.put("supplier", "");
+        body.put("dateOfPurchase", null);
+        body.put("version", created.get("version").asLong());
+        mvc.perform(put("/api/printers/{id}", created.get("id").asLong()).contentType(APPLICATION_JSON)
+                        .content(json.writeValueAsString(body))).andExpect(status().isOk())
+                .andExpect(jsonPath("$.supplier").value(nullValue()))
+                .andExpect(jsonPath("$.dateOfPurchase").value(nullValue()));
+    }
+
+    @Test
     void deletionRetainsPrinterAndReservesIdentifiers() throws Exception {
         long location = createLocation("ICT").get("id").asLong();
         long id = createPrinter(location, "ICT-PRN-001", "SN-001", "ACTIVE").get("id").asLong();
@@ -165,7 +185,8 @@ class InventoryIntegrationTests {
         createPrinter(location, null, "SN-CSV-2", "RETIRED");
         mvc.perform(put("/api/printers/{id}", first).contentType(APPLICATION_JSON)
                         .content(json.writeValueAsString(Map.of(
-                                "brand", "Epson", "model", "L5290", "stickerNumber", "ICT-PRN-CSV",
+                                "brand", "Epson", "model", "L5290", "supplier", "Office, \"Supply\" Co.",
+                                "dateOfPurchase", "2026-09-15", "stickerNumber", "ICT-PRN-CSV",
                                 "serialNumber", "SN-CSV-1", "locationId", location, "status", "ACTIVE",
                                 "remarks", "Comma, \"quote\"\nnext", "version", 0))))
                 .andExpect(status().isOk());
@@ -174,7 +195,8 @@ class InventoryIntegrationTests {
                 .andExpect(header().string("Content-Disposition", org.hamcrest.Matchers.containsString("printer-inventory-")))
                 .andReturn().getResponse();
         String csv = new String(response.getContentAsByteArray(), StandardCharsets.UTF_8);
-        assertTrue(csv.startsWith("\uFEFFSerial Number,Sticker Number,Brand,Model,Status"));
+        assertTrue(csv.startsWith("\uFEFFSerial Number,Sticker Number,Brand,Model,Supplier,Date of Purchase,Status"));
+        assertTrue(csv.contains("\"Office, \"\"Supply\"\" Co.\",\"2026-09-15\""));
         assertTrue(csv.contains("\"Comma, \"\"quote\"\"\nnext\""));
         assertTrue(csv.contains("\"SN-CSV-2\",\"\",\"Epson\""));
         assertEquals(2, csv.split("SN-CSV-", -1).length - 1);
@@ -183,9 +205,9 @@ class InventoryIntegrationTests {
     @Test
     void csvImportPreviewsThenCreatesPrintersAndReusesMatchingLocations() throws Exception {
         long existingLocation = createLocation("ICT").get("id").asLong();
-        String csv = "Serial Number,Sticker Number,Brand,Model,Status,Department,Section,Building,Floor,Room,Location Description,Remarks\r\n"
-                + "SN-IMPORT-1,,Epson,L5290,ACTIVE,ICT,Operations,Main,,101,,\"Comma, and \"\"quotes\"\"\"\r\n"
-                + "SN-IMPORT-2,STICKER-2,Canon,MF3010,Retired,Finance,,,,,,\"Second line\nremarks\"\r\n";
+        String csv = "Serial Number,Sticker Number,Brand,Model,Supplier,Date of Purchase,Status,Department,Section,Building,Floor,Room,Location Description,Remarks\r\n"
+                + "SN-IMPORT-1,,Epson,L5290,Office Supplies,2026-09-15,ACTIVE,ICT,Operations,Main,,101,,\"Comma, and \"\"quotes\"\"\"\r\n"
+                + "SN-IMPORT-2,STICKER-2,Canon,MF3010,,,Retired,Finance,,,,,,\"Second line\nremarks\"\r\n";
         var file = new MockMultipartFile("file", "printers.csv", "text/csv", csv.getBytes(StandardCharsets.UTF_8));
         mvc.perform(multipart("/api/printers/import/preview").file(file))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.totalRows").value(2))
@@ -194,7 +216,12 @@ class InventoryIntegrationTests {
                 .andExpect(status().isOk()).andExpect(jsonPath("$.imported").value(2));
         mvc.perform(get("/api/printers").param("search", "SN-IMPORT"))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.totalElements").value(2))
-                .andExpect(jsonPath("$.content[0].stickerNumber").value("STICKER-2"));
+                .andExpect(jsonPath("$.content[0].stickerNumber").value("STICKER-2"))
+                .andExpect(jsonPath("$.content[1].supplier").value("Office Supplies"))
+                .andExpect(jsonPath("$.content[1].dateOfPurchase").value("2026-09-15"));
+        mvc.perform(get("/api/printers/import/template"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Supplier,Date of Purchase")));
         assertEquals(1, jdbc.queryForObject("select count(*) from printers where location_id = ?", Integer.class, existingLocation));
         assertEquals(2, jdbc.queryForObject("select count(*) from locations", Integer.class));
     }

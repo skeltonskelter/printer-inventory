@@ -2,6 +2,7 @@ package com.example.printerinventory.entity;
 
 import jakarta.persistence.*;
 import java.time.Instant;
+import java.time.LocalDate;
 
 @Entity
 @Table(name = "printers")
@@ -13,6 +14,10 @@ public class Printer {
     private String brand;
     @Column(nullable = false, length = 120)
     private String model;
+    @Column(length = 200)
+    private String supplier;
+    @Column(name = "date_of_purchase")
+    private LocalDate dateOfPurchase;
     @Column(length = 120)
     private String serialNumber;
     @Column(nullable = false, length = 80)
@@ -42,10 +47,12 @@ public class Printer {
     @PreUpdate
     void onUpdate() { updatedAt = Instant.now(); }
 
-    public void update(String brand, String model, String serialNumber, String stickerNumber,
-                       PrinterStatus status, String remarks) {
+    public void update(String brand, String model, String supplier, LocalDate dateOfPurchase,
+                       String serialNumber, String stickerNumber, PrinterStatus status, String remarks) {
         this.brand = brand;
         this.model = model;
+        this.supplier = supplier;
+        this.dateOfPurchase = dateOfPurchase;
         this.serialNumber = serialNumber;
         this.stickerNumber = stickerNumber;
         this.status = status;
@@ -63,6 +70,8 @@ public class Printer {
     public Long getId() { return id; }
     public String getBrand() { return brand; }
     public String getModel() { return model; }
+    public String getSupplier() { return supplier; }
+    public LocalDate getDateOfPurchase() { return dateOfPurchase; }
     public String getSerialNumber() { return serialNumber; }
     public String getStickerNumber() { return stickerNumber; }
     public Location getLocation() { return location; }

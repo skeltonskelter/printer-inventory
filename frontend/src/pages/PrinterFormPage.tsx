@@ -101,6 +101,8 @@ function PrinterForm({
     const input = {
       brand: text("brand"),
       model: text("model"),
+      supplier: text("supplier") || null,
+      dateOfPurchase: text("dateOfPurchase") || null,
       stickerNumber: text("stickerNumber"),
       serialNumber: text("serialNumber") || null,
       locationId: Number(locationId),
@@ -181,6 +183,8 @@ function PrinterForm({
               [
                 ["brand", "Brand", 100, true],
                 ["model", "Model", 120, true],
+                ["supplier", "Supplier", 200, false],
+                ["dateOfPurchase", "Date of purchase", undefined, false],
                 ["serialNumber", "Serial number", 120, true],
                 ["stickerNumber", "Sticker number", 80, false],
               ] as const
@@ -194,7 +198,8 @@ function PrinterForm({
                   id={name}
                   name={name}
                   required={required}
-                  maxLength={max}
+                  {...(max ? { maxLength: max } : {})}
+                  type={name === "dateOfPurchase" ? "date" : "text"}
                   defaultValue={printer?.[name] ?? ""}
                   className={`form-control${invalid(name)}`}
                   aria-invalid={!!problem?.fieldErrors[name]}

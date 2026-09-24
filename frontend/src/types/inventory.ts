@@ -20,6 +20,8 @@ export interface Printer {
   id: number;
   brand: string;
   model: string;
+  supplier: string | null;
+  dateOfPurchase: string | null;
   serialNumber: string | null;
   stickerNumber: string | null;
   location: Location;
@@ -32,6 +34,8 @@ export interface Printer {
 export interface PrinterInput {
   brand: string;
   model: string;
+  supplier: string | null;
+  dateOfPurchase: string | null;
   serialNumber: string | null;
   stickerNumber: string | null;
   locationId: number;
