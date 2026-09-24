@@ -7,14 +7,25 @@ import { LoadError, Loading, PrinterBadge } from "../components/InventoryUi";
 import { statusLabels, type Printer, type PrinterImportPreview } from "../types/inventory";
 import { locationLabel, stickerLabel } from "../utils/inventory";
 
+const pageSizes = [25, 50, 100] as const;
+
 export function PrinterListPage() {
   const [params, setParams] = useSearchParams();
   const query = params.toString();
   const page = Math.max(0, Number(params.get("page")) || 0);
+  const requestedSize = Number(params.get("size"));
+  const pageSize = pageSizes.includes(requestedSize as (typeof pageSizes)[number])
+    ? requestedSize
+    : 25;
   const list = useResource(
     useCallback(
-      (signal) => inventory.list(new URLSearchParams(query), signal),
-      [query],
+      (signal) => {
+        const request = new URLSearchParams(query);
+        request.set("page", String(page));
+        request.set("size", String(pageSize));
+        return inventory.list(request, signal);
+      },
+      [page, pageSize, query],
     ),
   );
   const locations = useResource(
@@ -84,7 +95,11 @@ export function PrinterListPage() {
       }
       setNotice(`Imported ${result.imported} printer${result.imported === 1 ? "" : "s"}.`);
       cancelImport();
-      list.reload();
+      const next = new URLSearchParams(params);
+      next.delete("page");
+      next.set("size", String(pageSize));
+      if (next.toString() === params.toString()) list.reload();
+      else setParams(next);
       locations.reload();
     } catch {
       setImportError("The import could not be completed. No printers were imported.");
@@ -99,12 +114,19 @@ export function PrinterListPage() {
     new FormData(event.currentTarget).forEach((value, key) => {
       if (String(value).trim()) next.set(key, String(value).trim());
     });
+    next.set("size", String(pageSize));
     setNotice("");
     setParams(next);
   }
   function goToPage(value: number) {
     const next = new URLSearchParams(params);
     next.set("page", String(value));
+    setParams(next);
+  }
+  function changePageSize(value: number) {
+    const next = new URLSearchParams(params);
+    next.delete("page");
+    next.set("size", String(value));
     setParams(next);
   }
   function deleted() {
@@ -274,7 +296,7 @@ export function PrinterListPage() {
               className="btn btn-outline-secondary"
               type="button"
               onClick={() => {
-                setParams({});
+                setParams({ size: String(pageSize) });
                 setNotice("");
               }}
             >
@@ -331,9 +353,9 @@ export function PrinterListPage() {
                     <thead>
                       <tr>
                         {[
+                          "Serial number",
                           "Sticker number",
                           "Brand / model",
-                          "Serial number",
                           "Location",
                           "Status",
                           "Actions",
@@ -347,6 +369,7 @@ export function PrinterListPage() {
                     <tbody>
                       {list.data.content.map((printer) => (
                         <tr key={printer.id}>
+                          <td>{printer.serialNumber || "Not recorded"}</td>
                           <td>
                             <Link
                               className="sticker-link"
@@ -361,7 +384,6 @@ export function PrinterListPage() {
                               {printer.model}
                             </div>
                           </td>
-                          <td>{printer.serialNumber || "Not recorded"}</td>
                           <td>{locationLabel(printer.location)}</td>
                           <td>
                             <PrinterBadge status={printer.status} />
@@ -399,25 +421,38 @@ export function PrinterListPage() {
                 </div>
               </>
             )}
-            {list.data.totalPages > 1 && (
+            {list.data.totalElements > 0 && (
               <nav className="pagination-bar" aria-label="Printer pages">
-                <button
-                  className="btn btn-outline-secondary"
-                  disabled={page === 0}
-                  onClick={() => goToPage(page - 1)}
-                >
-                  Previous
-                </button>
+                <label className="pagination-size">
+                  Rows per page
+                  <select
+                    className="form-select form-select-sm"
+                    value={pageSize}
+                    onChange={(event) => changePageSize(Number(event.target.value))}
+                  >
+                    {pageSizes.map((size) => <option key={size} value={size}>{size}</option>)}
+                  </select>
+                </label>
                 <span>
-                  Page {page + 1} of {list.data.totalPages}
+                  Showing {list.data.page * list.data.size + 1}–{Math.min((list.data.page + 1) * list.data.size, list.data.totalElements)} of {list.data.totalElements} printers
                 </span>
-                <button
-                  className="btn btn-outline-secondary"
-                  disabled={page + 1 >= list.data.totalPages}
-                  onClick={() => goToPage(page + 1)}
-                >
-                  Next
-                </button>
+                <div className="pagination-controls">
+                  <button
+                    className="btn btn-outline-secondary"
+                    disabled={list.data.page === 0}
+                    onClick={() => goToPage(page - 1)}
+                  >
+                    Previous
+                  </button>
+                  <span>Page {list.data.page + 1} of {list.data.totalPages}</span>
+                  <button
+                    className="btn btn-outline-secondary"
+                    disabled={list.data.page + 1 >= list.data.totalPages}
+                    onClick={() => goToPage(page + 1)}
+                  >
+                    Next
+                  </button>
+                </div>
               </nav>
             )}
           </>
