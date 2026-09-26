@@ -227,6 +227,94 @@ class InventoryIntegrationTests {
     }
 
     @Test
+    void csvImportAcceptsSupportedPurchaseDatesAndBlankDates() throws Exception {
+        long existingLocation = createLocation("ICT").get("id").asLong();
+        String csv = "Serial Number,Sticker Number,Brand,Model,Supplier,Date of Purchase,Status,Department,Section,Building,Floor,Room,Location Description,Remarks\r\n"
+                + "SN-DATE-ISO,,Epson,L5290,,2025-12-12,ACTIVE,ICT,Operations,Main,,101,,\r\n"
+                + "SN-DATE-US,,Canon,MF3010,,12/12/2025,ACTIVE,ICT,,,,,,\r\n"
+                + "SN-DATE-BLANK,,HP,P1102,,,ACTIVE,NEW-DEPARTMENT,,,,,,\r\n"
+                + "SN-DATE-TRIM,,Brother,DCP,,\" 2025-12-12 \",ACTIVE,ICT,Operations,Main,,101,,\r\n"
+                + "SN-DATE-1-1,,Epson,L5290,,1/1/2025,ACTIVE,ICT,Operations,Main,,101,,\r\n"
+                + "SN-DATE-01-01,,Epson,L5290,,01/01/2025,ACTIVE,ICT,Operations,Main,,101,,\r\n"
+                + "SN-DATE-3-3,,Epson,L5290,,3/3/2015,ACTIVE,ICT,Operations,Main,,101,,\r\n"
+                + "SN-DATE-03-03,,Epson,L5290,,03/03/2015,ACTIVE,ICT,Operations,Main,,101,,\r\n"
+                + "SN-DATE-2-25,,Epson,L5290,,2/25/2025,ACTIVE,ICT,Operations,Main,,101,,\r\n"
+                + "SN-DATE-02-25,,Epson,L5290,,02/25/2025,ACTIVE,ICT,Operations,Main,,101,,\r\n";
+        var file = new MockMultipartFile("file", "dates.csv", "text/csv", csv.getBytes(StandardCharsets.UTF_8));
+
+        mvc.perform(multipart("/api/printers/import/preview").file(file))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.totalRows").value(10))
+                .andExpect(jsonPath("$.validRows").value(10)).andExpect(jsonPath("$.invalidRows").value(0));
+        mvc.perform(multipart("/api/printers/import/confirm").file(file))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.imported").value(10));
+
+        assertEquals("2025-12-12", jdbc.queryForObject(
+                "select date_of_purchase::text from printers where serial_number = 'SN-DATE-ISO'", String.class));
+        assertEquals("2025-12-12", jdbc.queryForObject(
+                "select date_of_purchase::text from printers where serial_number = 'SN-DATE-US'", String.class));
+        assertNull(jdbc.queryForObject(
+                "select date_of_purchase::text from printers where serial_number = 'SN-DATE-BLANK'", String.class));
+        assertEquals("2025-12-12", jdbc.queryForObject(
+                "select date_of_purchase::text from printers where serial_number = 'SN-DATE-TRIM'", String.class));
+        assertEquals("2025-01-01", jdbc.queryForObject(
+                "select date_of_purchase::text from printers where serial_number = 'SN-DATE-1-1'", String.class));
+        assertEquals("2025-01-01", jdbc.queryForObject(
+                "select date_of_purchase::text from printers where serial_number = 'SN-DATE-01-01'", String.class));
+        assertEquals("2015-03-03", jdbc.queryForObject(
+                "select date_of_purchase::text from printers where serial_number = 'SN-DATE-3-3'", String.class));
+        assertEquals("2015-03-03", jdbc.queryForObject(
+                "select date_of_purchase::text from printers where serial_number = 'SN-DATE-03-03'", String.class));
+        assertEquals("2025-02-25", jdbc.queryForObject(
+                "select date_of_purchase::text from printers where serial_number = 'SN-DATE-2-25'", String.class));
+        assertEquals("2025-02-25", jdbc.queryForObject(
+                "select date_of_purchase::text from printers where serial_number = 'SN-DATE-02-25'", String.class));
+        assertEquals(8, jdbc.queryForObject("select count(*) from printers where location_id = ?", Integer.class, existingLocation));
+        assertEquals(3, jdbc.queryForObject("select count(*) from locations", Integer.class));
+    }
+
+    @Test
+    void csvImportReportsInvalidPurchaseDatesAsRowErrors() throws Exception {
+        String csv = "Serial Number,Brand,Model,Date of Purchase,Status,Department\n"
+                + "SN-DATE-BAD-1,Epson,L5290,13/40/2025,ACTIVE,ICT\n"
+                + "SN-DATE-BAD-2,Canon,MF3010,2025-99-99,ACTIVE,ICT\n"
+                + "SN-DATE-BAD-3,HP,P1102,abc,ACTIVE,ICT\n";
+        var file = new MockMultipartFile("file", "invalid-dates.csv", "text/csv", csv.getBytes(StandardCharsets.UTF_8));
+
+        mvc.perform(multipart("/api/printers/import/preview").file(file))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.totalRows").value(3))
+                .andExpect(jsonPath("$.validRows").value(0)).andExpect(jsonPath("$.invalidRows").value(3))
+                .andExpect(jsonPath("$.errors[0].row").value(2))
+                .andExpect(jsonPath("$.errors[0].message").value("Invalid Date of Purchase. Use YYYY-MM-DD or MM/DD/YYYY."))
+                .andExpect(jsonPath("$.errors[1].row").value(3))
+                .andExpect(jsonPath("$.errors[1].message").value("Invalid Date of Purchase. Use YYYY-MM-DD or MM/DD/YYYY."))
+                .andExpect(jsonPath("$.errors[2].row").value(4))
+                .andExpect(jsonPath("$.errors[2].message").value("Invalid Date of Purchase. Use YYYY-MM-DD or MM/DD/YYYY."));
+        assertEquals(0, jdbc.queryForObject("select count(*) from printers", Integer.class));
+    }
+
+    @Test
+    void exportedPurchaseDateCanBeImportedAgain() throws Exception {
+        long location = createLocation("ICT").get("id").asLong();
+        var body = printerBody(location, "DATE-ROUNDTRIP", "SN-DATE-ROUNDTRIP", "ACTIVE");
+        body.put("dateOfPurchase", "2025-12-12");
+        mvc.perform(post("/api/printers").contentType(APPLICATION_JSON).content(json.writeValueAsString(body)))
+                .andExpect(status().isCreated());
+        byte[] exported = mvc.perform(get("/api/printers/export").param("search", "SN-DATE-ROUNDTRIP"))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsByteArray();
+        assertTrue(new String(exported, StandardCharsets.UTF_8).contains("\"2025-12-12\""));
+
+        jdbc.update("delete from printers where serial_number = 'SN-DATE-ROUNDTRIP'");
+        var file = new MockMultipartFile("file", "exported.csv", "text/csv", exported);
+        mvc.perform(multipart("/api/printers/import/preview").file(file))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.validRows").value(1))
+                .andExpect(jsonPath("$.invalidRows").value(0));
+        mvc.perform(multipart("/api/printers/import/confirm").file(file))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.imported").value(1));
+        assertEquals("2025-12-12", jdbc.queryForObject(
+                "select date_of_purchase::text from printers where serial_number = 'SN-DATE-ROUNDTRIP'", String.class));
+    }
+
+    @Test
     void csvImportRejectsInvalidStatusesAndDuplicateSerialsWithoutWriting() throws Exception {
         long location = createLocation("ICT").get("id").asLong();
         createPrinter(location, "EXISTING", "SN-EXISTING", "ACTIVE");

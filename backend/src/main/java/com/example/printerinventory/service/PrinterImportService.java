@@ -7,6 +7,11 @@ import com.example.printerinventory.repository.PrinterRepository;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatterBuilder;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
+import java.time.format.ResolverStyle;
+import java.time.temporal.ChronoField;
 import java.util.*;
 import org.apache.commons.csv.*;
 import org.springframework.http.HttpStatus;
@@ -18,6 +23,14 @@ import org.springframework.web.multipart.MultipartFile;
 public class PrinterImportService {
     private static final long MAX_FILE_SIZE = 5L * 1024 * 1024;
     private static final Set<String> REQUIRED_HEADERS = Set.of("Serial Number", "Brand", "Model", "Status", "Department");
+    private static final DateTimeFormatter US_DATE = new DateTimeFormatterBuilder()
+            .appendValue(ChronoField.MONTH_OF_YEAR, 1, 2, java.time.format.SignStyle.NOT_NEGATIVE)
+            .appendLiteral('/')
+            .appendValue(ChronoField.DAY_OF_MONTH, 1, 2, java.time.format.SignStyle.NOT_NEGATIVE)
+            .appendLiteral('/')
+            .appendValue(ChronoField.YEAR, 4)
+            .toFormatter()
+            .withResolverStyle(ResolverStyle.STRICT);
     private final PrinterRepository printers;
     private final LocationRepository locations;
     private final LocationService locationService;
@@ -122,7 +135,9 @@ public class PrinterImportService {
         try { parseStatus(row.statusText()); }
         catch (IllegalArgumentException exception) { return "Invalid status: " + row.statusText() + "."; }
         try { parseDateOfPurchase(row.dateOfPurchase()); }
-        catch (IllegalArgumentException exception) { return "Invalid Date of Purchase."; }
+        catch (DateTimeParseException exception) {
+            return "Invalid Date of Purchase. Use YYYY-MM-DD or MM/DD/YYYY.";
+        }
         String serialKey = row.serialNumber().toLowerCase(Locale.ROOT);
         if (!serials.add(serialKey)) return "Serial Number is duplicated in this CSV.";
         if (printers.existsBySerialNumberIgnoreCaseAndIdNot(row.serialNumber(), 0)) return "Serial Number already exists.";
@@ -139,7 +154,13 @@ public class PrinterImportService {
         return PrinterStatus.valueOf(value.trim().toUpperCase(Locale.ROOT).replaceAll("\\s+", "_"));
     }
     private static LocalDate parseDateOfPurchase(String value) {
-        return value == null ? null : LocalDate.parse(value);
+        if (value == null || value.isBlank()) return null;
+        String trimmed = value.trim();
+        try {
+            return LocalDate.parse(trimmed, DateTimeFormatter.ISO_LOCAL_DATE);
+        } catch (DateTimeParseException ignored) {
+            return LocalDate.parse(trimmed, US_DATE);
+        }
     }
     private static String value(CSVRecord record, Map<String, String> headers, String header) {
         String actual = headers.get(header);
