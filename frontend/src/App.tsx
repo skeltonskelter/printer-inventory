@@ -5,7 +5,10 @@ import {
   Route,
   Routes,
   useLocation,
+  useNavigate,
 } from "react-router-dom";
+import { useState } from "react";
+import { useAuth } from "./auth/AuthContext";
 import { Icon } from "./components/Icon";
 import { SystemPage } from "./pages/SystemPage";
 import { PrinterListPage } from "./pages/PrinterListPage";
@@ -13,9 +16,34 @@ import { PrinterFormPage } from "./pages/PrinterFormPage";
 import { PrinterDetailsPage } from "./pages/PrinterDetailsPage";
 import { RelocatePrinterPage } from "./pages/RelocatePrinterPage";
 import { DashboardPage } from "./pages/DashboardPage";
+import { LoginPage } from "./pages/LoginPage";
 
 export default function App() {
   const { pathname } = useLocation();
+  const navigate = useNavigate();
+  const { user, loading, logout } = useAuth();
+  const [logoutError, setLogoutError] = useState("");
+
+  if (loading) return <main className="auth-loading">Loading…</main>;
+  if (!user) {
+    return (
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="*" element={<Navigate to="/login" replace />} />
+      </Routes>
+    );
+  }
+  if (pathname === "/login") return <Navigate to="/printers" replace />;
+
+  async function signOut() {
+    setLogoutError("");
+    try {
+      await logout();
+      navigate("/login", { replace: true });
+    } catch {
+      setLogoutError("Logout could not be completed. Try again.");
+    }
+  }
   const section = pathname.startsWith("/system")
     ? "System overview"
     : pathname.startsWith("/printers")
@@ -56,6 +84,16 @@ export default function App() {
             <Icon name="server" /> System overview
           </NavLink>
         </nav>
+        <div className="sidebar-account">
+          <div>
+            <strong>{user.fullName}</strong>
+            <span>{user.role}</span>
+          </div>
+          <button type="button" className="btn btn-sm btn-outline-secondary" onClick={signOut}>
+            Logout
+          </button>
+          {logoutError && <small role="alert">{logoutError}</small>}
+        </div>
       </aside>
       <div className="main-shell">
         <header className="topbar">

@@ -21,6 +21,9 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/inventory_browser_test
       SPRING_DATASOURCE_USERNAME: inventory_test
       SPRING_DATASOURCE_PASSWORD: test_only_not_a_real_secret
+      INITIAL_ADMIN_USERNAME: e2e.admin
+      INITIAL_ADMIN_PASSWORD: E2e-only-password-2026!
+      INITIAL_ADMIN_FULL_NAME: E2E Administrator
     depends_on:
       db:
         condition: service_healthy
@@ -44,6 +47,9 @@ services:
     build: ./e2e
     init: true
     shm_size: 1gb
+    environment:
+      TEST_ADMIN_USERNAME: e2e.admin
+      TEST_ADMIN_PASSWORD: E2e-only-password-2026!
     volumes:
       - ./.verification/browser:/reports
     depends_on:

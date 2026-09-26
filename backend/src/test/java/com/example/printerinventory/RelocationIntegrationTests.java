@@ -25,7 +25,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 /** No test transaction: exercises real commits, rollback, and concurrent requests. */
 @SpringBootTest
-@AutoConfigureMockMvc
+@AutoConfigureMockMvc(addFilters = false)
 @Tag("integration")
 class RelocationIntegrationTests {
     @Autowired MockMvc mvc;

@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures.js';
 
 test('empty dashboard is the home page and failures have a retry', async ({ page }) => {
   await page.goto('/');

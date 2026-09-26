@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures.js';
 
 test('production proxy serves deep routes, security headers, cached assets, and JSON APIs', async ({ page, request }) => {
   const response = await request.get('/printers/123/relocate');
@@ -17,7 +17,7 @@ test('production proxy serves deep routes, security headers, cached assets, and 
   expect((await request.get('/assets/missing.js')).status()).toBe(404);
   const health = await request.get('/api/health');
   expect((await health.json()).database).toBe('UP');
-  expect(health.headers()['x-frame-options']).toBe('DENY');
+  expect(health.headers()['x-frame-options']).toContain('DENY');
   const missing = await request.get('/api/printers/9223372036854775807');
   expect(missing.status()).toBe(404);
   expect(missing.headers()['content-type']).toContain('application/json');

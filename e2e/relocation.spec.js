@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures.js';
 
 async function setup(request) {
   const suffix = `${Date.now()}-${Math.random().toString(16).slice(2, 6)}`;

@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures.js';
 
 const unique = () => `TEST-${Date.now()}-${Math.random().toString(16).slice(2, 6)}`.toUpperCase();
 async function seed(request, overrides = {}) {
@@ -94,22 +94,24 @@ test('duplicate identifiers and stale edits preserve input and explain conflicts
 
 test('filters survive refresh and history; pagination and delete-last-row recover', async ({ page, request }) => {
   const { printer, location, data } = await seed(request);
-  const second = await request.post('/api/printers', { data: { ...data, stickerNumber: unique(), serialNumber: `${data.serialNumber}-2`, status: 'STORAGE' } });
-  expect(second.status()).toBe(201);
-  await page.goto(`/printers?locationId=${location.id}&size=1`);
+  for (let index = 2; index <= 26; index++) {
+    const extra = await request.post('/api/printers', { data: { ...data, stickerNumber: unique(), serialNumber: `${data.serialNumber}-${index}`, status: 'STORAGE' } });
+    expect(extra.status()).toBe(201);
+  }
+  await page.goto(`/printers?locationId=${location.id}&size=25`);
   await expect(page.getByLabel('Location', { exact: true })).toHaveValue(String(location.id));
   await expect(page.getByText('Page 1 of 2', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Next', exact: true }).click();
   await expect(page.getByText('Page 2 of 2', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: `Delete ${printer.stickerNumber}`, exact: true }).click();
   await page.getByRole('button', { name: 'Delete printer', exact: true }).click();
-  await expect(page.getByRole('heading', { name: '1 printer', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '25 printers', exact: true })).toBeVisible();
   await expect(page).toHaveURL(/page=0/);
   await page.getByLabel('Status', { exact: true }).selectOption('ACTIVE');
   await page.getByRole('button', { name: 'Apply filters' }).click();
   await expect(page.getByRole('heading', { name: 'No printers found' })).toBeVisible();
   await page.goBack();
-  await expect(page.getByRole('heading', { name: '1 printer', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '25 printers', exact: true })).toBeVisible();
   await page.reload();
   await expect(page.getByLabel('Location', { exact: true })).toHaveValue(String(location.id));
 });

@@ -26,7 +26,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 /** Full Spring + Flyway + JPA + PostgreSQL API tests. Every test rolls back its records. */
 @SpringBootTest
-@AutoConfigureMockMvc
+@AutoConfigureMockMvc(addFilters = false)
 @Transactional
 @Tag("integration")
 class InventoryIntegrationTests {
