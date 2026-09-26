@@ -184,6 +184,31 @@ h1 { font-size: clamp(25px, 2.4vw, 31px); letter-spacing: -.9px; font-weight: 65
 .user-card dt { color: #737e90; font-size: 11px; }
 .user-card dd { margin-bottom: 12px; overflow-wrap: anywhere; }
 .user-editor { max-width: none; }
+.audit-filters { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.audit-filter-actions { grid-column: 1 / -1; display: flex; gap: 10px; flex-wrap: wrap; }
+.audit-table { overflow-x: auto; }
+.audit-table table { min-width: 1080px; font-size: 12px; }
+.audit-table th { padding: 15px 12px; font-size: 10px; text-transform: uppercase; letter-spacing: .6px; color: #5f7183; background: #f4f8fb; }
+.audit-table td { padding: 16px 12px; vertical-align: top; overflow-wrap: anywhere; }
+.audit-table td:nth-child(1) { width: 145px; }
+.audit-table td:nth-child(2) { width: 120px; }
+.audit-table td:nth-child(2) small { display: block; color: var(--brand-muted); margin-top: 4px; }
+.audit-table td:nth-child(7) { width: 115px; }
+.audit-badge { display: inline-block; padding: 5px 8px; border-radius: 5px; background: var(--brand-accent-light); color: var(--brand-primary-hover); font-size: 10px; white-space: nowrap; }
+.audit-details summary { color: var(--brand-primary); cursor: pointer; white-space: nowrap; }
+.audit-change-grid { display: grid; gap: 12px; margin-top: 12px; min-width: 250px; }
+.audit-change-grid h3 { font-size: 11px; margin: 0 0 7px; color: var(--brand-muted); }
+.audit-change-grid dl { margin: 0; }
+.audit-change-grid dl div { border-top: 1px solid #edf1f4; padding: 6px 0; }
+.audit-change-grid dt { color: var(--brand-muted); font-size: 10px; }
+.audit-change-grid dd { margin: 2px 0 0; white-space: pre-wrap; }
+.audit-cards { display: none; }
+.audit-card { padding: 20px; overflow-wrap: anywhere; }
+.audit-card-heading { display: flex; justify-content: space-between; align-items: center; gap: 12px; color: var(--brand-muted); font-size: 11px; }
+.audit-card h2 { font-size: 15px; margin: 16px 0; line-height: 1.5; }
+.audit-card dl { margin: 0 0 12px; }
+.audit-card dt { color: var(--brand-muted); font-size: 10px; }
+.audit-card dd { margin: 2px 0 10px; }
 .dashboard-metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
 .metric-card { padding: 24px; border-top: 3px solid #8874d1; }
 .metric-card h2 { font-size: 13px; font-weight: 600; margin: 0 0 18px; }
@@ -274,6 +299,8 @@ h1 { font-size: clamp(25px, 2.4vw, 31px); letter-spacing: -.9px; font-weight: 65
   .sidebar nav { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .user-table { display: none; }
   .user-cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+  .audit-table { display: none; }
+  .audit-cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
 }
 @media (max-width: 767.98px) {
   .nav-item { flex-direction: column; font-size: 11px; text-align: center; }
@@ -286,6 +313,8 @@ h1 { font-size: clamp(25px, 2.4vw, 31px); letter-spacing: -.9px; font-weight: 65
   .printer-actions .btn { flex: 1 0 auto; }
   .user-cards { grid-template-columns: minmax(0, 1fr); }
   .user-actions .btn { flex: 1 0 auto; }
+  .audit-filters { grid-template-columns: minmax(0, 1fr); }
+  .audit-cards { grid-template-columns: minmax(0, 1fr); }
 }
 @media (max-width: 359.98px) {
   .dashboard-metrics { grid-template-columns: minmax(0, 1fr); }

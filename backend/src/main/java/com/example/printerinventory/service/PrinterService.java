@@ -17,10 +17,12 @@ import static org.springframework.http.HttpStatus.*;
 public class PrinterService {
     private final PrinterRepository printers;
     private final LocationService locations;
+    private final AuditService audit;
 
-    public PrinterService(PrinterRepository printers, LocationService locations) {
+    public PrinterService(PrinterRepository printers, LocationService locations, AuditService audit) {
         this.printers = printers;
         this.locations = locations;
+        this.audit = audit;
     }
 
     public PageResponse<PrinterResponse> list(String search, String brand, Long locationId,
@@ -68,10 +70,19 @@ public class PrinterService {
 
     @Transactional
     public PrinterResponse create(PrinterRequest request) {
+        return create(request, true);
+    }
+
+    PrinterResponse createImported(PrinterRequest request) { return create(request, false); }
+
+    private PrinterResponse create(PrinterRequest request, boolean recordAudit) {
         Printer printer = new Printer();
         printer.assignInitialLocation(locations.findForUpdate(request.locationId()));
         apply(printer, request);
-        return PrinterResponse.from(printers.saveAndFlush(printer));
+        printer = printers.saveAndFlush(printer);
+        if (recordAudit) audit.record(AuditAction.CREATE, AuditEntityType.PRINTER, printer.getId(),
+                AuditDetails.printerIdentifier(printer), "Printer created.", null, AuditDetails.printer(printer));
+        return PrinterResponse.from(printer);
     }
 
     @Transactional
@@ -82,15 +93,23 @@ public class PrinterService {
             throw new ApiException(CONFLICT,
                     "Location changes require a relocation record. Use the relocate endpoint.");
         }
+        var before = AuditDetails.printer(printer);
         apply(printer, request);
-        return PrinterResponse.from(printers.saveAndFlush(printer));
+        printer = printers.saveAndFlush(printer);
+        var changes = AuditDetails.changes(before, AuditDetails.printer(printer));
+        audit.record(AuditAction.UPDATE, AuditEntityType.PRINTER, printer.getId(), AuditDetails.printerIdentifier(printer),
+                "Printer updated.", changes.oldValues(), changes.newValues());
+        return PrinterResponse.from(printer);
     }
 
     @Transactional
     public void delete(long id) {
         Printer printer = find(id);
+        var deletedValues = AuditDetails.printer(printer);
         printer.markDeleted();
         printers.flush();
+        audit.record(AuditAction.DELETE, AuditEntityType.PRINTER, printer.getId(), AuditDetails.printerIdentifier(printer),
+                "Printer deleted.", deletedValues, null);
     }
 
     private Printer find(long id) {

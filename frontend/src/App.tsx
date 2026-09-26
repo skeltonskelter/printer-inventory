@@ -18,6 +18,7 @@ import { RelocatePrinterPage } from "./pages/RelocatePrinterPage";
 import { DashboardPage } from "./pages/DashboardPage";
 import { LoginPage } from "./pages/LoginPage";
 import { UserManagementPage } from "./pages/UserManagementPage";
+import { AuditTrailPage } from "./pages/AuditTrailPage";
 
 export default function App() {
   const { pathname } = useLocation();
@@ -47,6 +48,8 @@ export default function App() {
   }
   const section = pathname.startsWith("/users")
     ? "User Management"
+    : pathname.startsWith("/audit-trail")
+    ? "Audit Trail"
     : pathname.startsWith("/system")
     ? "System overview"
     : pathname.startsWith("/printers")
@@ -87,9 +90,8 @@ export default function App() {
             <Icon name="server" /> System overview
           </NavLink>
           {user.role === "ADMIN" && (
-            <NavLink to="/users" className="nav-item">
-              <Icon name="users" /> User Management
-            </NavLink>
+            <><NavLink to="/users" className="nav-item"><Icon name="users" /> User Management</NavLink>
+            <NavLink to="/audit-trail" className="nav-item"><Icon name="audit" /> Audit Trail</NavLink></>
           )}
         </nav>
         <div className="sidebar-account">
@@ -116,6 +118,7 @@ export default function App() {
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/system" element={<SystemPage />} />
             <Route path="/users" element={user.role === "ADMIN" ? <UserManagementPage /> : <Navigate to="/printers" replace />} />
+            <Route path="/audit-trail" element={user.role === "ADMIN" ? <AuditTrailPage /> : <Navigate to="/printers" replace />} />
             <Route path="/printers" element={<PrinterListPage />} />
             <Route
               path="/printers/new"

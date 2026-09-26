@@ -1,7 +1,7 @@
 package com.example.printerinventory.service;
 
 import com.example.printerinventory.dto.*;
-import com.example.printerinventory.entity.Location;
+import com.example.printerinventory.entity.*;
 import com.example.printerinventory.exception.ApiException;
 import com.example.printerinventory.repository.*;
 import java.util.List;
@@ -17,11 +17,14 @@ public class LocationService {
     private final LocationRepository locations;
     private final PrinterRepository printers;
     private final RelocationHistoryRepository history;
+    private final AuditService audit;
 
-    public LocationService(LocationRepository locations, PrinterRepository printers, RelocationHistoryRepository history) {
+    public LocationService(LocationRepository locations, PrinterRepository printers, RelocationHistoryRepository history,
+                           AuditService audit) {
         this.locations = locations;
         this.printers = printers;
         this.history = history;
+        this.audit = audit;
     }
 
     public List<LocationResponse> list() {
@@ -36,25 +39,43 @@ public class LocationService {
 
     @Transactional
     public LocationResponse create(LocationRequest request) {
+        return create(request, true);
+    }
+
+    LocationResponse createImported(LocationRequest request) { return create(request, false); }
+
+    private LocationResponse create(LocationRequest request, boolean recordAudit) {
         Location location = new Location();
         apply(location, request);
-        return LocationResponse.from(locations.saveAndFlush(location));
+        location = locations.saveAndFlush(location);
+        if (recordAudit) audit.record(AuditAction.CREATE, AuditEntityType.LOCATION, location.getId(),
+                AuditDetails.locationLabel(location), "Location created.", null, AuditDetails.location(location));
+        return LocationResponse.from(location);
     }
 
     @Transactional
     public LocationResponse update(long id, LocationRequest request) {
         Location location = findForUpdate(id);
         checkVersion(request.version(), location.getVersion());
+        var before = AuditDetails.location(location);
         apply(location, request);
-        return LocationResponse.from(locations.saveAndFlush(location));
+        location = locations.saveAndFlush(location);
+        var changes = AuditDetails.changes(before, AuditDetails.location(location));
+        audit.record(AuditAction.UPDATE, AuditEntityType.LOCATION, location.getId(),
+                AuditDetails.locationLabel(location), "Location updated.", changes.oldValues(), changes.newValues());
+        return LocationResponse.from(location);
     }
 
     @Transactional
     public void delete(long id) {
         Location location = findForUpdate(id);
         ensureUnused(id);
+        var values = AuditDetails.location(location);
+        String identifier = AuditDetails.locationLabel(location);
         locations.delete(location);
         locations.flush();
+        audit.record(AuditAction.DELETE, AuditEntityType.LOCATION, id, identifier,
+                "Location deleted.", values, null);
     }
 
     @Transactional

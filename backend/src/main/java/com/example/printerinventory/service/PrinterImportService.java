@@ -22,13 +22,15 @@ public class PrinterImportService {
     private final LocationRepository locations;
     private final LocationService locationService;
     private final PrinterService printerService;
+    private final AuditService audit;
 
     public PrinterImportService(PrinterRepository printers, LocationRepository locations,
-                                LocationService locationService, PrinterService printerService) {
+                                LocationService locationService, PrinterService printerService, AuditService audit) {
         this.printers = printers;
         this.locations = locations;
         this.locationService = locationService;
         this.printerService = printerService;
+        this.audit = audit;
     }
 
     public PrinterImportPreview preview(MultipartFile file) {
@@ -49,14 +51,20 @@ public class PrinterImportService {
                 String key = locationKey(row.department(), row.section(), row.building(), row.floor(), row.room(), row.description());
                 Long locationId = knownLocations.get(key);
                 if (locationId == null) {
-                    var created = locationService.create(new LocationRequest(row.department(), row.section(), row.building(),
+                    var created = locationService.createImported(new LocationRequest(row.department(), row.section(), row.building(),
                             row.floor(), row.room(), row.description(), null));
                     locationId = created.id();
                     knownLocations.put(key, locationId);
                 }
-                printerService.create(new PrinterRequest(row.brand(), row.model(), row.supplier(), parseDateOfPurchase(row.dateOfPurchase()), row.serialNumber(), row.stickerNumber(),
+                printerService.createImported(new PrinterRequest(row.brand(), row.model(), row.supplier(), parseDateOfPurchase(row.dateOfPurchase()), row.serialNumber(), row.stickerNumber(),
                         locationId, parseStatus(row.statusText()), row.remarks(), null));
             }
+            var details = new LinkedHashMap<String, Object>();
+            details.put("totalRows", parsed.totalRows()); details.put("importedRows", parsed.rows().size());
+            details.put("invalidRows", 0);
+            audit.record(com.example.printerinventory.entity.AuditAction.IMPORT,
+                    com.example.printerinventory.entity.AuditEntityType.CSV_IMPORT, null,
+                    "CSV Import", "CSV import completed.", null, details);
             return new PrinterImportResult(parsed.rows().size(), 0, List.of());
         } catch (RuntimeException exception) {
             throw new com.example.printerinventory.exception.ApiException(HttpStatus.CONFLICT,
