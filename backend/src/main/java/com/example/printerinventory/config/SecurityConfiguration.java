@@ -1,6 +1,7 @@
 package com.example.printerinventory.config;
 
 import com.example.printerinventory.security.InventoryUserDetailsService;
+import com.example.printerinventory.security.UserStateFilter;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -11,6 +12,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
+import org.springframework.security.web.access.intercept.AuthorizationFilter;
 import org.springframework.security.web.csrf.HttpSessionCsrfTokenRepository;
 
 @Configuration
@@ -28,13 +30,15 @@ public class SecurityConfiguration {
 
     @Bean
     SecurityFilterChain securityFilterChain(HttpSecurity http,
-                                            DaoAuthenticationProvider authenticationProvider) throws Exception {
+                                            DaoAuthenticationProvider authenticationProvider,
+                                            UserStateFilter userStateFilter) throws Exception {
         var csrfRepository = new HttpSessionCsrfTokenRepository();
 
         http
                 .authenticationProvider(authenticationProvider)
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers("/api/health", "/api/auth/csrf", "/api/auth/login").permitAll()
+                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/**").hasAnyRole("USER", "ADMIN")
                         .anyRequest().permitAll())
                 .csrf(csrf -> csrf.csrfTokenRepository(csrfRepository))
@@ -52,6 +56,7 @@ public class SecurityConfiguration {
                         .logoutSuccessHandler((request, response, authentication) ->
                                 response.setStatus(HttpServletResponse.SC_NO_CONTENT)))
                 .requestCache(cache -> cache.disable())
+                .addFilterBefore(userStateFilter, AuthorizationFilter.class)
                 .exceptionHandling(errors -> errors
                         .authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED))
                         .accessDeniedHandler((request, response, exception) ->

@@ -57,7 +57,7 @@ public class ApiExceptionHandler {
     @ExceptionHandler({HttpMessageNotReadableException.class, MethodArgumentTypeMismatchException.class})
     ResponseEntity<ApiError> unreadable(Exception exception, HttpServletRequest request) {
         return error(HttpStatus.BAD_REQUEST,
-                "Invalid JSON or parameter value. Use numeric IDs and a supported printer status.", request, Map.of());
+                "Invalid JSON or parameter value. Use numeric IDs and supported values.", request, Map.of());
     }
 
     @ExceptionHandler(DataIntegrityViolationException.class)
@@ -66,6 +66,7 @@ public class ApiExceptionHandler {
         String message = "This change conflicts with existing data. Referenced locations cannot be deleted.";
         if (detail != null && detail.contains("uk_printers_sticker")) message = "Sticker number is already in use.";
         if (detail != null && detail.contains("uk_printers_serial")) message = "Serial number is already in use.";
+        if (detail != null && detail.contains("uk_app_users_username_lower")) message = "Username already exists.";
         return error(HttpStatus.CONFLICT, message, request, Map.of());
     }
 

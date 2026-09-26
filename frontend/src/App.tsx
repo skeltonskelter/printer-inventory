@@ -17,6 +17,7 @@ import { PrinterDetailsPage } from "./pages/PrinterDetailsPage";
 import { RelocatePrinterPage } from "./pages/RelocatePrinterPage";
 import { DashboardPage } from "./pages/DashboardPage";
 import { LoginPage } from "./pages/LoginPage";
+import { UserManagementPage } from "./pages/UserManagementPage";
 
 export default function App() {
   const { pathname } = useLocation();
@@ -44,7 +45,9 @@ export default function App() {
       setLogoutError("Logout could not be completed. Try again.");
     }
   }
-  const section = pathname.startsWith("/system")
+  const section = pathname.startsWith("/users")
+    ? "User Management"
+    : pathname.startsWith("/system")
     ? "System overview"
     : pathname.startsWith("/printers")
       ? "Printers"
@@ -83,6 +86,11 @@ export default function App() {
           <NavLink to="/system" className="nav-item">
             <Icon name="server" /> System overview
           </NavLink>
+          {user.role === "ADMIN" && (
+            <NavLink to="/users" className="nav-item">
+              <Icon name="users" /> User Management
+            </NavLink>
+          )}
         </nav>
         <div className="sidebar-account">
           <div>
@@ -107,6 +115,7 @@ export default function App() {
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/system" element={<SystemPage />} />
+            <Route path="/users" element={user.role === "ADMIN" ? <UserManagementPage /> : <Navigate to="/printers" replace />} />
             <Route path="/printers" element={<PrinterListPage />} />
             <Route
               path="/printers/new"

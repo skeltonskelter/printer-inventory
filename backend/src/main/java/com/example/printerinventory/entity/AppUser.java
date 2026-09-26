@@ -51,6 +51,17 @@ public class AppUser {
     @PreUpdate
     void onUpdate() { updatedAt = Instant.now(); }
 
+    public void updateProfile(String username, String fullName, UserRole role, boolean enabled) {
+        this.username = username;
+        this.fullName = fullName;
+        this.role = role;
+        this.enabled = enabled;
+    }
+
+    public void changePassword(String passwordHash) { this.passwordHash = passwordHash; }
+
+    public void setEnabled(boolean enabled) { this.enabled = enabled; }
+
     public Long getId() { return id; }
     public String getUsername() { return username; }
     public String getPasswordHash() { return passwordHash; }
