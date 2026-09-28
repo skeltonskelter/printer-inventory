@@ -12,6 +12,7 @@ services:
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
 
       VAULT_ADDR: ${VAULT_ADDR:-http://central-vault:8200}
+      SPRING_CLOUD_VAULT_URI: ${VAULT_ADDR:-http://central-vault:8200}
       VAULT_ROLE_ID: ${VAULT_ROLE_ID:?Set VAULT_ROLE_ID in the ignored deployment environment}
       VAULT_SECRET_ID: ${VAULT_SECRET_ID:?Set VAULT_SECRET_ID in the ignored deployment environment}
 
