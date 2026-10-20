@@ -90,6 +90,25 @@ class RelocationIntegrationTests {
     }
 
     @Test
+    void missingSerialUsesPrinterIdInRelocationAuditDescription() throws Exception {
+        long source = location("ICT"), destination = location("Storage");
+        JsonNode created = json.readTree(mvc.perform(post("/api/printers").contentType(APPLICATION_JSON)
+                        .content(json.writeValueAsString(Map.of("brand", "Epson", "model", "L5290",
+                                "serialNumber", "NA", "locationId", source, "status", "ACTIVE"))))
+                .andExpect(status().isCreated()).andExpect(jsonPath("$.serialNumber").value(org.hamcrest.Matchers.nullValue()))
+                .andReturn().getResponse().getContentAsString());
+        long id = created.get("id").asLong();
+        printerIds.add(id);
+        move(id, destination, today(), 0, 200);
+        String description = jdbc.queryForObject("""
+                select description from audit_logs
+                where action = 'RELOCATE' and entity_identifier = ? order by id desc limit 1
+                """, String.class, "#" + id);
+        assertTrue(description.contains("Printer #" + id + " relocated"));
+        assertFalse(description.contains("null"));
+    }
+
+    @Test
     void invalidDestinationsDatesAndVersionsDoNotChangeThePrinter() throws Exception {
         long a = location("ICT"), b = location("Accounting");
         long id = printer(a).get("id").asLong();

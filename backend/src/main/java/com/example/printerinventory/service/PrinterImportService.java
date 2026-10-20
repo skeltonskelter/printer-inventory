@@ -106,7 +106,7 @@ public class PrinterImportService {
             for (CSVRecord record : csv) {
                 totalRows++;
                 long rowNumber = record.getRecordNumber() + 1;
-                Row row = new Row(value(record, headers, "Serial Number"), value(record, headers, "Sticker Number"),
+                Row row = new Row(InputText.serialNumber(value(record, headers, "Serial Number")), value(record, headers, "Sticker Number"),
                         value(record, headers, "Brand"), value(record, headers, "Model"), value(record, headers, "Supplier"),
                         value(record, headers, "Date of Purchase"), value(record, headers, "Status"),
                         value(record, headers, "Department"), value(record, headers, "Section"), value(record, headers, "Building"),
@@ -123,12 +123,11 @@ public class PrinterImportService {
     }
 
     private String validate(Row row, Set<String> serials, Set<String> stickers) {
-        if (row.serialNumber() == null) return "Serial Number is required.";
         if (row.brand() == null) return "Brand is required.";
         if (row.model() == null) return "Model is required.";
         if (row.department() == null) return "Department is required.";
         if (row.statusText() == null) return "Status is required.";
-        if (row.serialNumber().length() > 120 || row.brand().length() > 100 || row.model().length() > 120) return "A required field exceeds its maximum length.";
+        if (tooLong(row.serialNumber(), 120) || row.brand().length() > 100 || row.model().length() > 120) return "A required field exceeds its maximum length.";
         if (row.department().length() > 120 || tooLong(row.section(), 120) || tooLong(row.building(), 120) || tooLong(row.floor(), 50)
                 || tooLong(row.room(), 80) || tooLong(row.description(), 1000) || tooLong(row.remarks(), 2000)
                 || tooLong(row.stickerNumber(), 80) || tooLong(row.supplier(), 200)) return "A location or optional field exceeds its maximum length.";
@@ -138,9 +137,11 @@ public class PrinterImportService {
         catch (DateTimeParseException exception) {
             return "Invalid Date of Purchase. Use YYYY-MM-DD or MM/DD/YYYY.";
         }
-        String serialKey = row.serialNumber().toLowerCase(Locale.ROOT);
-        if (!serials.add(serialKey)) return "Serial Number is duplicated in this CSV.";
-        if (printers.existsBySerialNumberIgnoreCaseAndIdNot(row.serialNumber(), 0)) return "Serial Number already exists.";
+        if (row.serialNumber() != null) {
+            String serialKey = row.serialNumber().toLowerCase(Locale.ROOT);
+            if (!serials.add(serialKey)) return "Serial Number is duplicated in this CSV.";
+            if (printers.existsBySerialNumberIgnoreCaseAndIdNot(row.serialNumber(), 0)) return "Serial Number already exists.";
+        }
         if (row.stickerNumber() != null) {
             String stickerKey = row.stickerNumber().toLowerCase(Locale.ROOT);
             if (!stickers.add(stickerKey)) return "Sticker Number is duplicated in this CSV.";

@@ -6,7 +6,11 @@ import java.util.*;
 public final class AuditDetails {
     private AuditDetails() {}
 
-    public static String printerIdentifier(Printer printer) { return printer.getSerialNumber(); }
+    public static String printerIdentifier(Printer printer) {
+        if (printer.getSerialNumber() != null) return printer.getSerialNumber();
+        if (printer.getStickerNumber() != null) return printer.getStickerNumber();
+        return "#" + printer.getId();
+    }
 
     public static Map<String, Object> printer(Printer value) {
         var result = new LinkedHashMap<String, Object>();

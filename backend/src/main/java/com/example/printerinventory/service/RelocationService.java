@@ -69,7 +69,7 @@ public class RelocationService {
         newValues.put("relocationDate", request.relocationDate());
         newValues.put("remarks", remarks);
         audit.record(AuditAction.RELOCATE, AuditEntityType.RELOCATION, relocation.getId(),
-                AuditDetails.printerIdentifier(printer), "Printer " + printer.getSerialNumber() + " relocated from "
+                AuditDetails.printerIdentifier(printer), "Printer " + AuditDetails.printerIdentifier(printer) + " relocated from "
                         + AuditDetails.locationLabel(previous) + " to " + AuditDetails.locationLabel(destination) + ".",
                 oldValues, newValues);
         return PrinterResponse.from(printer);

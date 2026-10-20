@@ -315,7 +315,7 @@ class InventoryIntegrationTests {
     }
 
     @Test
-    void csvImportRejectsInvalidStatusesAndDuplicateSerialsWithoutWriting() throws Exception {
+    void csvImportRejectsInvalidStatusesAndExistingSerialsWithoutWriting() throws Exception {
         long location = createLocation("ICT").get("id").asLong();
         createPrinter(location, "EXISTING", "SN-EXISTING", "ACTIVE");
         String csv = "Serial Number,Sticker Number,Brand,Model,Status,Department\n"
@@ -326,7 +326,7 @@ class InventoryIntegrationTests {
         var file = new MockMultipartFile("file", "invalid.csv", "text/csv", csv.getBytes(StandardCharsets.UTF_8));
         mvc.perform(multipart("/api/printers/import/preview").file(file))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.totalRows").value(4))
-                .andExpect(jsonPath("$.validRows").value(1)).andExpect(jsonPath("$.invalidRows").value(3))
+                .andExpect(jsonPath("$.validRows").value(2)).andExpect(jsonPath("$.invalidRows").value(2))
                 .andExpect(jsonPath("$.errors[0].message").value("Serial Number already exists."));
         mvc.perform(multipart("/api/printers/import/confirm").file(file))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.imported").value(0));
@@ -341,28 +341,171 @@ class InventoryIntegrationTests {
     }
 
     @Test
-    void serialNumbersAreRequiredAndWhitespaceIsRejected() throws Exception {
+    void missingSerialNumbersAreOptionalForCreation() throws Exception {
         long location = createLocation("ICT").get("id").asLong();
-        mvc.perform(post("/api/printers").contentType(APPLICATION_JSON)
-                        .content(json.writeValueAsString(printerBody(location, "ICT-PRN-001", "  ", "ACTIVE"))))
-                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.fieldErrors.serialNumber")
-                        .value("Serial number is required"));
-        mvc.perform(post("/api/printers").contentType(APPLICATION_JSON)
-                        .content(json.writeValueAsString(printerBody(location, "ICT-PRN-002", null, "ACTIVE"))))
-                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.fieldErrors.serialNumber")
-                        .value("Serial number is required"));
+        for (String serial : new String[] {null, "", "   ", "NA", " na ", "N/A", " n/a "}) {
+            mvc.perform(post("/api/printers").contentType(APPLICATION_JSON)
+                            .content(json.writeValueAsString(printerBody(location, null, serial, "ACTIVE"))))
+                    .andExpect(status().isCreated()).andExpect(jsonPath("$.serialNumber").value(nullValue()));
+        }
+        assertEquals(7, jdbc.queryForObject("select count(*) from printers where serial_number is null", Integer.class));
     }
 
     @Test
-    void serialNumberCannotBeClearedWhenEditing() throws Exception {
+    void serialNumberCanBeClearedWhenEditing() throws Exception {
         long location = createLocation("ICT").get("id").asLong();
         JsonNode printer = createPrinter(location, "ICT-PRN-SERIAL", "SN-VALID", "ACTIVE");
         Map<String, Object> edit = printerBody(location, "ICT-PRN-SERIAL", "   ", "ACTIVE");
         edit.put("version", printer.get("version").asLong());
         mvc.perform(put("/api/printers/{id}", printer.get("id").asLong()).contentType(APPLICATION_JSON)
                         .content(json.writeValueAsString(edit)))
-                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.fieldErrors.serialNumber")
-                        .value("Serial number is required"));
+                .andExpect(status().isOk()).andExpect(jsonPath("$.serialNumber").value(nullValue()));
+        assertEquals(1, jdbc.queryForObject("select count(*) from printers where id = ? and serial_number is null",
+                Integer.class, printer.get("id").asLong()));
+    }
+
+    @Test
+    void creationValidatesSerialLengthAfterNormalization() throws Exception {
+        long location = createLocation("ICT").get("id").asLong();
+        String padding = " ".repeat(121);
+        for (String missing : new String[] {padding, padding + "nA" + padding, padding + "N/a" + padding}) {
+            mvc.perform(post("/api/printers").contentType(APPLICATION_JSON)
+                            .content(json.writeValueAsString(printerBody(location, null, missing, "ACTIVE"))))
+                    .andExpect(status().isCreated()).andExpect(jsonPath("$.serialNumber").value(nullValue()));
+        }
+        mvc.perform(post("/api/printers").contentType(APPLICATION_JSON)
+                        .content(json.writeValueAsString(printerBody(location, null, padding + "x".repeat(121) + padding, "ACTIVE"))))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.fieldErrors.serialNumber").exists());
+        mvc.perform(post("/api/printers").contentType(APPLICATION_JSON)
+                        .content(json.writeValueAsString(printerBody(location, null, padding + " sn-valid " + padding, "ACTIVE"))))
+                .andExpect(status().isCreated()).andExpect(jsonPath("$.serialNumber").value("SN-VALID"));
+        assertEquals(3, jdbc.queryForObject("select count(*) from printers where serial_number is null", Integer.class));
+    }
+
+    @Test
+    void editingValidatesSerialLengthAfterNormalization() throws Exception {
+        long location = createLocation("ICT").get("id").asLong();
+        String padding = " ".repeat(121);
+        JsonNode printer = createPrinter(location, null, "SN-EDIT-EDGE", "ACTIVE");
+        long id = printer.get("id").asLong();
+        long version = printer.get("version").asLong();
+        for (String missing : new String[] {padding, padding + "na" + padding, padding + "n/A" + padding}) {
+            var edit = printerBody(location, null, missing, "ACTIVE");
+            edit.put("version", version);
+            JsonNode updated = json.readTree(mvc.perform(put("/api/printers/{id}", id).contentType(APPLICATION_JSON)
+                            .content(json.writeValueAsString(edit)))
+                    .andExpect(status().isOk()).andExpect(jsonPath("$.serialNumber").value(nullValue()))
+                    .andReturn().getResponse().getContentAsString());
+            version = updated.get("version").asLong();
+        }
+        var tooLong = printerBody(location, null, padding + "x".repeat(121) + padding, "ACTIVE");
+        tooLong.put("version", version);
+        mvc.perform(put("/api/printers/{id}", id).contentType(APPLICATION_JSON)
+                        .content(json.writeValueAsString(tooLong)))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.fieldErrors.serialNumber").exists());
+        var valid = printerBody(location, null, padding + " sn-edit-valid " + padding, "ACTIVE");
+        valid.put("version", version);
+        mvc.perform(put("/api/printers/{id}", id).contentType(APPLICATION_JSON)
+                        .content(json.writeValueAsString(valid)))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.serialNumber").value("SN-EDIT-VALID"));
+    }
+
+    @Test
+    void editingCannotReuseAnotherRealSerialNumber() throws Exception {
+        long location = createLocation("ICT").get("id").asLong();
+        createPrinter(location, null, "SN-FIRST", "ACTIVE");
+        JsonNode second = createPrinter(location, null, "SN-SECOND", "ACTIVE");
+        var edit = printerBody(location, null, " sn-first ", "ACTIVE");
+        edit.put("version", second.get("version").asLong());
+        mvc.perform(put("/api/printers/{id}", second.get("id").asLong()).contentType(APPLICATION_JSON)
+                        .content(json.writeValueAsString(edit)))
+                .andExpect(status().isConflict());
+        mvc.perform(get("/api/printers/{id}", second.get("id").asLong()))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.serialNumber").value("SN-SECOND"));
+    }
+
+    @Test
+    void csvImportAllowsRepeatedMissingSerialsAndExportCanBeReimported() throws Exception {
+        String csv = "Serial Number,Sticker Number,Brand,Model,Status,Department\r\n"
+                + "NA,,Epson,L5290,ACTIVE,ICT\r\n"
+                + " na ,,Epson,L5190,ACTIVE,ICT\r\n"
+                + " n/a ,,Canon,MF3010,ACTIVE,ICT\r\n"
+                + "N/A,,Canon,MF3020,ACTIVE,ICT\r\n"
+                + ",,HP,M404,RETIRED,ICT\r\n"
+                + "   ,,Brother,HL,STORAGE,ICT\r\n";
+        var file = new MockMultipartFile("file", "missing.csv", "text/csv", csv.getBytes(StandardCharsets.UTF_8));
+        mvc.perform(multipart("/api/printers/import/preview").file(file))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.validRows").value(6))
+                .andExpect(jsonPath("$.invalidRows").value(0));
+        mvc.perform(multipart("/api/printers/import/confirm").file(file))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.imported").value(6));
+        assertEquals(6, jdbc.queryForObject("select count(*) from printers where serial_number is null", Integer.class));
+        byte[] exported = mvc.perform(get("/api/printers/export")).andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsByteArray();
+        assertTrue(new String(exported, StandardCharsets.UTF_8).contains("\"\",\"\",\""));
+        var roundTrip = new MockMultipartFile("file", "exported.csv", "text/csv", exported);
+        mvc.perform(multipart("/api/printers/import/preview").file(roundTrip))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.validRows").value(6));
+        mvc.perform(multipart("/api/printers/import/confirm").file(roundTrip))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.imported").value(6));
+        assertEquals(12, jdbc.queryForObject("select count(*) from printers where serial_number is null", Integer.class));
+        mvc.perform(get("/api/printers").param("search", "Epson"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.totalElements").value(4));
+    }
+
+    @Test
+    void csvImportStillRejectsDuplicateRealSerials() throws Exception {
+        String csv = "Serial Number,Brand,Model,Status,Department\r\n"
+                + "SN-REAL,Epson,L5290,ACTIVE,ICT\r\n"
+                + " sn-real ,Canon,MF3010,ACTIVE,ICT\r\n";
+        var file = new MockMultipartFile("file", "duplicates.csv", "text/csv", csv.getBytes(StandardCharsets.UTF_8));
+        mvc.perform(multipart("/api/printers/import/preview").file(file))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.validRows").value(1))
+                .andExpect(jsonPath("$.errors[0].message").value("Serial Number is duplicated in this CSV."));
+        mvc.perform(multipart("/api/printers/import/confirm").file(file))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.imported").value(0));
+    }
+
+    @Test
+    void existingPlaceholderAndDeletedRealSerialRemainProtected() throws Exception {
+        long location = createLocation("ICT").get("id").asLong();
+        long legacyId = jdbc.queryForObject("""
+                insert into printers (brand, model, serial_number, location_id, status, created_at, updated_at)
+                values ('Legacy', 'L1', 'NA', ?, 'ACTIVE', now(), now())
+                returning id
+                """, Long.class, location);
+        jdbc.update("""
+                insert into printers (brand, model, serial_number, location_id, status, created_at, updated_at)
+                values ('Legacy', 'L2', 'N/A', ?, 'ACTIVE', now(), now())
+                """, location);
+        assertEquals(1, jdbc.queryForObject("select count(*) from printers where serial_number = 'NA'", Integer.class));
+        createPrinter(location, null, "n/a", "ACTIVE");
+        assertEquals(1, jdbc.queryForObject("select count(*) from printers where serial_number = 'NA'", Integer.class));
+        assertEquals(1, jdbc.queryForObject("select count(*) from printers where serial_number = 'N/A'", Integer.class));
+        var edit = printerBody(location, null, "NA", "ACTIVE");
+        edit.put("version", 0);
+        mvc.perform(put("/api/printers/{id}", legacyId).contentType(APPLICATION_JSON)
+                        .content(json.writeValueAsString(edit)))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.serialNumber").value(nullValue()));
+        assertEquals(1, jdbc.queryForObject("select count(*) from printers where serial_number = 'N/A'", Integer.class));
+        long deleted = createPrinter(location, null, "SN-RESERVED", "ACTIVE").get("id").asLong();
+        mvc.perform(delete("/api/printers/{id}", deleted)).andExpect(status().isNoContent());
+        mvc.perform(post("/api/printers").contentType(APPLICATION_JSON)
+                        .content(json.writeValueAsString(printerBody(location, null, "sn-reserved", "ACTIVE"))))
+                .andExpect(status().isConflict());
+    }
+
+    @Test
+    void databaseAllowsMultipleNullSerialsButStillRejectsDuplicateRealSerials() throws Exception {
+        long location = createLocation("ICT").get("id").asLong();
+        createPrinter(location, null, null, "ACTIVE");
+        createPrinter(location, null, "NA", "ACTIVE");
+        assertEquals(2, jdbc.queryForObject("select count(*) from printers where serial_number is null", Integer.class));
+        createPrinter(location, null, "SN-DB-UNIQUE", "ACTIVE");
+        assertThrows(DataIntegrityViolationException.class, () -> jdbc.update("""
+                insert into printers (brand, model, serial_number, location_id, status, created_at, updated_at)
+                values ('Epson', 'L5290', ' sn-db-unique ', ?, 'ACTIVE', now(), now())
+                """, location));
     }
 
     @Test

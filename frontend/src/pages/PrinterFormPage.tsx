@@ -86,7 +86,6 @@ function PrinterForm({
     for (const [name, label] of [
       ["brand", "Brand"],
       ["model", "Model"],
-      ["serialNumber", "Serial Number"],
     ]) {
       if (!text(name)) errors[name] = `${label} is required.`;
     }
@@ -185,7 +184,7 @@ function PrinterForm({
                 ["model", "Model", 120, true],
                 ["supplier", "Supplier", 200, false],
                 ["dateOfPurchase", "Date of purchase", undefined, false],
-                ["serialNumber", "Serial number", 120, true],
+                ["serialNumber", "Serial number", 120, false],
                 ["stickerNumber", "Sticker number", 80, false],
               ] as const
             ).map(([name, label, max, required]) => (
@@ -198,7 +197,7 @@ function PrinterForm({
                   id={name}
                   name={name}
                   required={required}
-                  {...(max ? { maxLength: max } : {})}
+                  {...(max && name !== "serialNumber" ? { maxLength: max } : {})}
                   type={name === "dateOfPurchase" ? "date" : "text"}
                   defaultValue={printer?.[name] ?? ""}
                   className={`form-control${invalid(name)}`}
@@ -207,7 +206,7 @@ function PrinterForm({
                 />
                 <div className="form-text" id={`${name}-help`}>
                   {name === "serialNumber"
-                    ? "Leave blank if unknown."
+                    ? "Leave blank if unknown. NA and N/A are treated as missing."
                     : name === "stickerNumber"
                       ? "Use the unique asset sticker on the printer."
                       : ""}

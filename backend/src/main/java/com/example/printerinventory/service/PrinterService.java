@@ -119,7 +119,7 @@ public class PrinterService {
 
     private void apply(Printer printer, PrinterRequest request) {
         String sticker = InputText.identifier(request.stickerNumber());
-        String serial = InputText.identifier(request.serialNumber());
+        String serial = InputText.serialNumber(request.serialNumber());
         long excludedId = printer.getId() == null ? 0 : printer.getId();
         if (sticker != null && printers.existsByStickerNumberIgnoreCaseAndIdNot(sticker, excludedId)) {
             throw new ApiException(CONFLICT, "Sticker number is already in use, including retained deleted printers.");

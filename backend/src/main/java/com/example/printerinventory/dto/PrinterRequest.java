@@ -1,6 +1,7 @@
 package com.example.printerinventory.dto;
 
 import com.example.printerinventory.entity.PrinterStatus;
+import com.example.printerinventory.service.InputText;
 import jakarta.validation.constraints.*;
 import java.time.LocalDate;
 
@@ -9,10 +10,14 @@ public record PrinterRequest(
         @NotBlank(message = "Model is required") @Size(max = 120) String model,
         @Size(max = 200) String supplier,
         LocalDate dateOfPurchase,
-        @NotBlank(message = "Serial number is required") @Size(max = 120) String serialNumber,
+        @Size(max = 120) String serialNumber,
         @Size(max = 80) String stickerNumber,
         @NotNull(message = "Location is required") @Positive Long locationId,
         @NotNull(message = "Status is required") PrinterStatus status,
         @Size(max = 2000) String remarks,
         @PositiveOrZero Long version
-) {}
+) {
+    public PrinterRequest {
+        serialNumber = InputText.serialNumber(serialNumber);
+    }
+}
